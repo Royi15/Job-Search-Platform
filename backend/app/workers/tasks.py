@@ -5,7 +5,7 @@ worker in settings.py) and reuses the same services/ code the API uses.
 """
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -171,6 +171,42 @@ async def _notify_matching_users(db: AsyncSession, jobs: list[Job]) -> None:
                     alert = await db.get(JobAlert, alert_id)
                     alert.notified_at = datetime.now(timezone.utc)
         await db.commit()
+
+
+async def match_preference(ctx: dict, preference_id: int) -> str:
+    """Backfill: when a preference is created or re-activated, immediately
+    check it against recently fetched jobs — otherwise the user waits in
+    silence until the next genuinely new posting happens to match."""
+    async with ctx["db_factory"]() as db:
+        pref = await db.get(SearchPreference, preference_id)
+        if pref is None or not pref.is_active:
+            return "preference missing or inactive"
+        user = await db.get(User, pref.user_id)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+        jobs = (
+            await db.scalars(select(Job).where(Job.first_seen_at >= cutoff))
+        ).all()
+
+        created = 0
+        for job in jobs:
+            if not job_matches_preference(job, pref):
+                continue
+            alert_id = await db.scalar(
+                pg_insert(JobAlert)
+                .values(user_id=pref.user_id, job_id=job.id, preference_id=pref.id)
+                .on_conflict_do_nothing(index_elements=["user_id", "job_id"])
+                .returning(JobAlert.id)
+            )
+            if alert_id is None:
+                continue  # already alerted for this job
+            created += 1
+            if user and user.telegram_chat_id:
+                if await tg.send_message(user.telegram_chat_id, tg.format_job_alert(job)):
+                    alert = await db.get(JobAlert, alert_id)
+                    alert.notified_at = datetime.now(timezone.utc)
+        await db.commit()
+        logger.info("match_preference(%s): %d new alerts", preference_id, created)
+        return f"matched={created}"
 
 
 async def fetch_and_notify(ctx: dict) -> str:

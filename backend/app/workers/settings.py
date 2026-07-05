@@ -8,7 +8,12 @@ from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
-from app.workers.tasks import fetch_and_notify, parse_resume, run_generation
+from app.workers.tasks import (
+    fetch_and_notify,
+    match_preference,
+    parse_resume,
+    run_generation,
+)
 
 
 async def startup(ctx: dict) -> None:
@@ -26,7 +31,7 @@ async def shutdown(ctx: dict) -> None:
 class WorkerSettings:
     # fetch_and_notify is listed here too (not only in cron) so it can be
     # enqueued manually for testing: python -m scripts.trigger_fetch
-    functions = [parse_resume, run_generation, fetch_and_notify]
+    functions = [parse_resume, run_generation, fetch_and_notify, match_preference]
     cron_jobs = [
         # Hourly on the hour, 09:00-18:00 server-local time (VM timezone is
         # Asia/Jerusalem) — job boards are quiet at night and Bright Data

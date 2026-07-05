@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
-from app.api.deps import DB, CurrentUser
+from app.api.deps import DB, CurrentUser, Queue
 from app.models import SearchPreference
 from app.schemas.preference import PreferenceCreate, PreferenceOut, PreferenceUpdate
 
@@ -30,21 +30,29 @@ async def list_preferences(user: CurrentUser, db: DB):
 
 
 @router.post("", response_model=PreferenceOut, status_code=status.HTTP_201_CREATED)
-async def create_preference(body: PreferenceCreate, user: CurrentUser, db: DB):
+async def create_preference(
+    body: PreferenceCreate, user: CurrentUser, db: DB, queue: Queue
+):
     pref = SearchPreference(user_id=user.id, **body.model_dump())
     db.add(pref)
     await db.commit()
     await db.refresh(pref)
+    # Backfill against recently fetched jobs so the user gets instant feedback
+    await queue.enqueue_job("match_preference", pref.id)
     return pref
 
 
 @router.patch("/{pref_id}", response_model=PreferenceOut)
-async def update_preference(pref_id: int, body: PreferenceUpdate, user: CurrentUser, db: DB):
+async def update_preference(
+    pref_id: int, body: PreferenceUpdate, user: CurrentUser, db: DB, queue: Queue
+):
     pref = await _owned_pref(db, user.id, pref_id)
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(pref, field, value)
     await db.commit()
     await db.refresh(pref)
+    if pref.is_active:
+        await queue.enqueue_job("match_preference", pref.id)
     return pref
 
 
