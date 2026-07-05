@@ -4,7 +4,9 @@ The schema itself is owned by db/schema.sql — the ORM models mirror it,
 they do not create it.
 """
 from collections.abc import AsyncGenerator
+from datetime import datetime
 
+from sqlalchemy import DateTime
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -16,7 +18,9 @@ from app.core.config import get_settings
 
 
 class Base(DeclarativeBase):
-    pass
+    # Every datetime column in db/schema.sql is TIMESTAMPTZ — map Python
+    # datetimes accordingly, or asyncpg rejects timezone-aware values.
+    type_annotation_map = {datetime: DateTime(timezone=True)}
 
 
 engine = create_async_engine(
