@@ -10,6 +10,7 @@ The /scrape endpoint is synchronous when the crawl is fast; when it takes
 longer Bright Data answers with a snapshot_id that we poll until ready.
 """
 import asyncio
+import json
 import logging
 from datetime import datetime
 
@@ -25,6 +26,19 @@ SNAPSHOT_URL = "https://api.brightdata.com/datasets/v3/snapshot/{snapshot_id}"
 
 POLL_INTERVAL_SECONDS = 15
 POLL_BUDGET_SECONDS = 480  # stay under the worker's 600 s cron timeout
+
+
+def _parse_json_or_ndjson(text: str):
+    """Bright Data answers with either a normal JSON document or NDJSON
+    (one JSON object per line). json.loads raising "Extra data" means
+    NDJSON — parse line by line."""
+    text = text.strip()
+    if not text:
+        return []
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
 class BrightDataLinkedInSource:
@@ -61,7 +75,7 @@ class BrightDataLinkedInSource:
                 SCRAPE_URL, params=params, headers=headers, json=payload
             )
             response.raise_for_status()
-            data = response.json()
+            data = _parse_json_or_ndjson(response.text)
 
             if isinstance(data, dict) and "snapshot_id" in data:
                 # Crawl still running — poll the snapshot until it's ready.
@@ -89,7 +103,7 @@ class BrightDataLinkedInSource:
             waited += POLL_INTERVAL_SECONDS
             response = await client.get(url, params={"format": "json"}, headers=headers)
             if response.status_code == 200:
-                data = response.json()
+                data = _parse_json_or_ndjson(response.text)
                 return data if isinstance(data, list) else []
             if response.status_code != 202:  # 202 = still building
                 response.raise_for_status()
