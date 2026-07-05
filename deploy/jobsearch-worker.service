@@ -1,0 +1,23 @@
+[Unit]
+Description=Job Search Platform — ARQ background worker (queue + cron)
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=jobsearch
+Group=jobsearch
+WorkingDirectory=/opt/jobsearch/backend
+EnvironmentFile=/opt/jobsearch/backend/.env
+ExecStart=/opt/jobsearch/backend/.venv/bin/arq app.workers.settings.WorkerSettings
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/jobsearch/backend/uploads
+
+[Install]
+WantedBy=multi-user.target
