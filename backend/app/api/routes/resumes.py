@@ -64,6 +64,19 @@ async def get_resume(resume_id: int, user: CurrentUser, db: DB):
     return resume
 
 
+@router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_resume(resume_id: int, user: CurrentUser, db: DB) -> None:
+    resume = await db.scalar(
+        select(Resume).where(Resume.id == resume_id, Resume.user_id == user.id)
+    )
+    if resume is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Resume not found")
+    # Remove the PDF from disk too — no orphaned files piling up on the VM.
+    Path(resume.storage_path).unlink(missing_ok=True)
+    await db.delete(resume)
+    await db.commit()
+
+
 @router.post("/{resume_id}/primary", response_model=ResumeOut)
 async def set_primary(resume_id: int, user: CurrentUser, db: DB):
     resume = await db.scalar(
