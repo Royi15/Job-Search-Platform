@@ -35,9 +35,25 @@ EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 PHONE_RE = re.compile(r"(?:\+?\d[\d\s\-().]{7,}\d)")
 
 
+def _collapse_exploded_line(line: str) -> str:
+    """Some PDF exporters (design tools especially) position every glyph
+    separately, so extraction yields 'P y t h o n  a n d  J a v a' — single
+    spaces between letters, wider gaps between words. Detect such lines and
+    reassemble the words."""
+    tokens = [t for t in line.split(" ") if t]
+    if len(tokens) < 6:
+        return line
+    single_char = sum(1 for t in tokens if len(t) == 1)
+    if single_char / len(tokens) < 0.7:
+        return line  # normal text — leave untouched
+    words = re.split(r"\s{2,}", line.strip())
+    return " ".join(w.replace(" ", "") for w in words)
+
+
 def extract_pdf_text(path: str) -> str:
     reader = PdfReader(path)
-    return "\n".join(page.extract_text() or "" for page in reader.pages)
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    return "\n".join(_collapse_exploded_line(line) for line in text.splitlines())
 
 
 def _find_skills(text_lower: str) -> list[str]:

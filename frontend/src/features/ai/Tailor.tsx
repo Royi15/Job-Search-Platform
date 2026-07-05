@@ -65,6 +65,16 @@ export default function Tailor() {
 
       {result && (
         <div style={{ marginTop: 24, maxWidth: 860 }}>
+          <div className="disclaimer">
+            <span>⚠️</span>
+            <span>
+              These suggestions are AI-generated and can be wrong. Read every
+              rewrite before using it — make sure it stays true to your actual
+              experience, and never submit a claim you can't back up in an
+              interview. The scores are rough estimates of keyword matching,
+              not a guarantee of how any specific company's ATS will rank you.
+            </span>
+          </div>
           <div className="score-row">
             <div className="score-box">
               <div className="n">{result.ats_score_before}%</div>
