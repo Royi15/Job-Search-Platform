@@ -11,6 +11,8 @@ from typing import Any
 
 from pypdf import PdfReader
 
+from app.services import llm
+
 # Common tech-stack vocabulary an ATS keyword filter would match against.
 # Extend freely — matching is case-insensitive on word boundaries.
 KNOWN_SKILLS = [
@@ -23,6 +25,9 @@ KNOWN_SKILLS = [
     "kafka", "rabbitmq", "microservices", "machine learning", "deep learning",
     "pytorch", "tensorflow", "pandas", "numpy", "data analysis", "nlp",
     "agile", "scrum", "tdd", "unit testing", "oop", "design patterns",
+    "networking", "tcp/ip", "dns", "dhcp", "vpn", "firewall", "cisco",
+    "wireshark", "active directory", "troubleshooting", "technical support",
+    "incident response", "monitoring", "noc", "bash", "powershell",
 ]
 
 SECTION_HEADERS = [
@@ -80,6 +85,31 @@ def parse_resume_text(text: str) -> dict[str, Any]:
         "phones": [p.strip() for p in PHONE_RE.findall(text)][:3],
         "word_count": len(text.split()),
     }
+
+
+SKILL_EXTRACT_PROMPT = """\
+Extract every skill this resume demonstrates: programming languages,
+frameworks, tools, technologies, methodologies, and domain expertise
+(e.g. networking, incident response). Only skills the text actually
+supports — do not infer or embellish.
+
+Return JSON: {{"skills": ["short lowercase skill names", ...]}}
+
+RESUME:
+---
+{resume}
+---
+"""
+
+
+async def extract_skills_llm(resume_text: str) -> list[str]:
+    """LLM-based skill extraction — understands any skill in any phrasing,
+    unlike the fixed KNOWN_SKILLS dictionary (kept as offline fallback)."""
+    data = await llm.generate_json(
+        SKILL_EXTRACT_PROMPT.format(resume=resume_text[:15000]), temperature=0.1
+    )
+    skills = data.get("skills", [])
+    return sorted({s.strip().lower() for s in skills if isinstance(s, str) and s.strip()})[:60]
 
 
 def keyword_coverage(resume_text: str, job_description: str) -> dict[str, Any]:

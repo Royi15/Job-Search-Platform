@@ -87,6 +87,17 @@ export default function Resumes() {
                   Skills the ATS sees in your resume (a simulation — real
                   screening systems vary and may read your resume differently):
                 </div>
+                {r.extracted?.skills_source === "dictionary" && (
+                  <div className="disclaimer" style={{ margin: "10px 0 0" }}>
+                    <span>⚠️</span>
+                    <span>
+                      Our AI couldn't analyze your CV this time, so we matched
+                      it against our built-in skills database instead — some of
+                      your skills may be missing from this list. Deleting and
+                      re-uploading usually fixes it.
+                    </span>
+                  </div>
+                )}
                 <div className="chips">
                   {(r.extracted?.skills ?? []).map((s) => (
                     <span className="chip green" key={s}>{s}</span>

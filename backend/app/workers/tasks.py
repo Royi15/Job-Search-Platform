@@ -22,7 +22,11 @@ from app.models import (
 )
 from app.services import cover_letter, discord, tailoring
 from app.services import telegram as tg
-from app.services.ats_parser import extract_pdf_text, parse_resume_text
+from app.services.ats_parser import (
+    extract_pdf_text,
+    extract_skills_llm,
+    parse_resume_text,
+)
 from app.services.job_sources import FetchedJob, get_active_sources
 from app.services.matching import job_matches_preference
 
@@ -41,7 +45,18 @@ async def parse_resume(ctx: dict, resume_id: int) -> None:
             # pypdf is CPU-bound — keep the worker's event loop responsive.
             text = await asyncio.to_thread(extract_pdf_text, resume.storage_path)
             resume.raw_text = text
-            resume.extracted = parse_resume_text(text)
+            extracted = parse_resume_text(text)  # regex: contacts, sections + dict skills
+            try:
+                extracted["skills"] = await extract_skills_llm(text)
+                extracted["skills_source"] = "ai"
+            except Exception:
+                # LLM down/quota — keep the dictionary scan rather than failing
+                logger.warning(
+                    "LLM skill extraction failed for resume %s — using dictionary",
+                    resume_id, exc_info=True,
+                )
+                extracted["skills_source"] = "dictionary"
+            resume.extracted = extracted
             resume.parse_status = "done"
         except Exception:
             logger.exception("Failed to parse resume %s", resume_id)

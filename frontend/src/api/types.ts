@@ -62,7 +62,11 @@ export interface Resume {
   id: number;
   original_filename: string;
   parse_status: "pending" | "done" | "failed";
-  extracted: { skills?: string[]; sections_detected?: string[] } | null;
+  extracted: {
+    skills?: string[];
+    sections_detected?: string[];
+    skills_source?: "ai" | "dictionary";
+  } | null;
   is_primary: boolean;
   uploaded_at: string;
 }
