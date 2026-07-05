@@ -40,10 +40,21 @@ async def generate(
     if json_mode:
         payload["generationConfig"]["responseMimeType"] = "application/json"
 
-    async with httpx.AsyncClient(timeout=90) as client:
-        response = await client.post(
-            url, json=payload, headers={"x-goog-api-key": settings.llm_api_key}
-        )
+    # Big prompts (full resume + job description, JSON output) can take the
+    # model a few minutes. One automatic retry on timeout/connection errors.
+    timeout = httpx.Timeout(240.0, connect=15.0)
+    response = None
+    for attempt in (1, 2):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(
+                    url, json=payload, headers={"x-goog-api-key": settings.llm_api_key}
+                )
+            break
+        except (httpx.TimeoutException, httpx.TransportError) as exc:
+            if attempt == 2:
+                raise LLMError(f"LLM request failed twice: {type(exc).__name__}") from exc
+            logger.warning("LLM request %s — retrying once", type(exc).__name__)
 
     if response.status_code != 200:
         logger.error("LLM HTTP %s: %s", response.status_code, response.text[:500])

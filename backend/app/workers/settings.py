@@ -39,5 +39,5 @@ class WorkerSettings:
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 4          # LLM calls are I/O-bound; 4 concurrent is plenty
-    job_timeout = 300
+    job_timeout = 600     # room for a slow LLM call plus one retry
     keep_result = 3600

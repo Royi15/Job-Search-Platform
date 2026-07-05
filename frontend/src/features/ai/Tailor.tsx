@@ -52,7 +52,7 @@ export default function Tailor() {
               onChange={(e) => setJd(e.target.value)} />
           </div>
           <button className="btn btn-yellow" disabled={running} style={{ justifySelf: "start" }}>
-            {running ? "Analyzing… (~20s)" : "🛡️ Jailbreak the ATS"}
+            {running ? "Analyzing… this can take a few minutes" : "🛡️ Jailbreak the ATS"}
           </button>
         </form>
       )}
