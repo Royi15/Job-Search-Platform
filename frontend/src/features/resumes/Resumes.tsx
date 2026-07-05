@@ -42,6 +42,13 @@ export default function Resumes() {
     await load();
   }
 
+  async function remove(r: Resume) {
+    if (!window.confirm(`Delete "${r.original_filename}"? This can't be undone.`))
+      return;
+    await api.delete(`/resumes/${r.id}`);
+    await load();
+  }
+
   return (
     <div>
       <h1>Resumes</h1>
@@ -90,13 +97,16 @@ export default function Resumes() {
                 </div>
               </>
             )}
-            {!r.is_primary && (
-              <div className="actions">
+            <div className="actions">
+              {!r.is_primary && (
                 <button className="btn btn-ghost btn-sm" onClick={() => setPrimary(r.id)}>
                   Make primary
                 </button>
-              </div>
-            )}
+              )}
+              <button className="btn btn-danger btn-sm" onClick={() => remove(r)}>
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>
