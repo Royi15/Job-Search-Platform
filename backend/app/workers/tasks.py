@@ -80,7 +80,8 @@ async def run_generation(ctx: dict, generation_id: int) -> None:
         except Exception as exc:
             logger.exception("Generation %s failed", generation_id)
             generation.status = "failed"
-            generation.error = str(exc)[:500]
+            # Include the exception class: str() of timeouts etc. is often ""
+            generation.error = f"{type(exc).__name__}: {exc}"[:500].strip(": ")
         generation.completed_at = datetime.now(timezone.utc)
         await db.commit()
 

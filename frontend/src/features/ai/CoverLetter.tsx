@@ -71,7 +71,7 @@ export default function CoverLetter() {
               onChange={(e) => setJd(e.target.value)} />
           </div>
           <button className="btn btn-yellow" disabled={running} style={{ justifySelf: "start" }}>
-            {running ? "Writing… (~15s)" : "✨ Generate"}
+            {running ? "Writing… this can take a few minutes" : "✨ Generate"}
           </button>
         </form>
       )}
