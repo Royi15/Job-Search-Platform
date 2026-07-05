@@ -28,11 +28,12 @@ class WorkerSettings:
     # enqueued manually for testing: python -m scripts.trigger_fetch
     functions = [parse_resume, run_generation, fetch_and_notify]
     cron_jobs = [
-        # Hourly: Bright Data bills per scraped record and the search window is
-        # "Past 24 hours", so tighter polling only costs money — dedup by
-        # job_posting_id means no duplicate notifications either way.
+        # Hourly on the hour, 09:00-18:00 server-local time (VM timezone is
+        # Asia/Jerusalem) — job boards are quiet at night and Bright Data
+        # bills per scraped record. The 24h search window still catches
+        # anything posted overnight in the 09:00 run.
         # unique=True prevents overlap if a run is slow.
-        cron(fetch_and_notify, minute={0}, unique=True, timeout=600),
+        cron(fetch_and_notify, hour=set(range(9, 19)), minute={0}, unique=True, timeout=600),
     ]
     on_startup = startup
     on_shutdown = shutdown
