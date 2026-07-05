@@ -26,12 +26,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Endpoints where a 401 means "bad credentials", not "expired session" —
+// the silent-refresh logic must never hijack these.
+const NO_REFRESH = ["/auth/login", "/auth/register", "/auth/refresh"];
+
 // On 401, try one silent refresh, then replay the original request.
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retried && tokens.refresh) {
+    const isCredentialCall = NO_REFRESH.some((p) => original?.url?.includes(p));
+    if (
+      error.response?.status === 401 &&
+      !isCredentialCall &&
+      !original._retried &&
+      tokens.refresh
+    ) {
       original._retried = true;
       try {
         const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
