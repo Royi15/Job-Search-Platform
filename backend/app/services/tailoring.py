@@ -25,6 +25,7 @@ the resume: {missing}
 
 Return JSON with exactly this shape:
 {{
+  "jd_keywords": ["the 10-18 most important concrete skills, technologies, tools or qualifications this job description asks for — short lowercase phrases"],
   "gap_summary": "2-3 sentences: the real semantic gap, not just keywords",
   "rewrites": [
     {{
@@ -65,26 +66,46 @@ def _apply_rewrites(resume_text: str, rewrites: list[dict[str, Any]]) -> str:
     return patched
 
 
+def _coverage(text: str, keywords: list[str]) -> tuple[list[str], list[str], int]:
+    """Which keywords appear in the text, which don't, and the percentage."""
+    text_lower = text.lower()
+    matched = sorted(k for k in keywords if k in text_lower)
+    missing = sorted(k for k in keywords if k not in text_lower)
+    score = round(100 * len(matched) / len(keywords)) if keywords else 100
+    return matched, missing, score
+
+
 async def tailor_resume(resume_text: str, job_description: str) -> dict[str, Any]:
-    before = keyword_coverage(resume_text, job_description)
+    # Dictionary-based scan feeds the prompt a first hint of what's missing.
+    dict_scan = keyword_coverage(resume_text, job_description)
 
     analysis = await llm.generate_json(
         PROMPT_TEMPLATE.format(
-            missing=", ".join(before["missing"]) or "(none — focus on phrasing)",
+            missing=", ".join(dict_scan["missing"]) or "(none — focus on phrasing)",
             resume=resume_text[:15000],
             job_description=job_description[:15000],
         ),
         system=SYSTEM_PROMPT,
     )
-
     rewrites = analysis.get("rewrites", [])
-    after = keyword_coverage(_apply_rewrites(resume_text, rewrites), job_description)
+
+    # Score against this JD's actual vocabulary: the requirements the LLM
+    # extracted plus our tech dictionary hits. A fixed dictionary alone
+    # saturates at 100% on jobs whose stack it doesn't cover.
+    llm_keywords = {
+        k.strip().lower()
+        for k in analysis.get("jd_keywords", [])
+        if isinstance(k, str) and k.strip()
+    }
+    keywords = sorted(llm_keywords | set(dict_scan["matched"]) | set(dict_scan["missing"]))
+    matched, missing, score_before = _coverage(resume_text, keywords)
+    _, _, score_after = _coverage(_apply_rewrites(resume_text, rewrites), keywords)
 
     return {
-        "ats_score_before": before["score"],
-        "ats_score_after": after["score"],
-        "keywords_matched": before["matched"],
-        "keywords_missing": before["missing"],
+        "ats_score_before": score_before,
+        "ats_score_after": score_after,
+        "keywords_matched": matched,
+        "keywords_missing": missing,
         "gap_summary": analysis.get("gap_summary", ""),
         "rewrites": rewrites,
         "keywords_not_injectable": analysis.get("keywords_not_injectable", []),
