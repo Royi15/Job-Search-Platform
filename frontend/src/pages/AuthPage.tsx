@@ -21,7 +21,20 @@ export default function AuthPage({ mode }: { mode: "login" | "register" }) {
       else await register(email, password, fullName);
       navigate("/app");
     } catch (err: any) {
-      setError(err.response?.data?.detail ?? "Something went wrong — try again");
+      const detail = err.response?.data?.detail;
+      if (typeof detail === "string") {
+        setError(detail);
+      } else if (Array.isArray(detail)) {
+        // FastAPI validation errors (422): a list of {loc, msg, type} objects
+        setError(
+          detail
+            .map((d: any) => (d.loc?.includes("email") ? "Please enter a valid email address" : d.msg))
+            .filter(Boolean)
+            .join(". ") || "Please check your input"
+        );
+      } else {
+        setError("Something went wrong — try again");
+      }
     } finally {
       setBusy(false);
     }
