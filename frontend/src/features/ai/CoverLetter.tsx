@@ -84,6 +84,15 @@ export default function CoverLetter() {
 
       {result?.text && (
         <div style={{ marginTop: 24, maxWidth: 860 }}>
+          <div className="disclaimer">
+            <span>⚠️</span>
+            <span>
+              AI-generated draft — it can contain mistakes or overstate your
+              experience. Read it fully, fix anything inaccurate, and add your
+              personal touch before sending. Recruiters can smell an unedited
+              AI letter.
+            </span>
+          </div>
           {result.subject && (
             <div className="panel" style={{ marginBottom: 12 }}>
               <div className="meta">Suggested subject</div>

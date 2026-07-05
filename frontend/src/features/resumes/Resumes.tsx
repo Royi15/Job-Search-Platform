@@ -77,7 +77,8 @@ export default function Resumes() {
             {r.parse_status === "done" && (
               <>
                 <div className="meta" style={{ marginTop: 10 }}>
-                  Skills the ATS sees in your resume:
+                  Skills the ATS sees in your resume (a simulation — real
+                  screening systems vary and may read your resume differently):
                 </div>
                 <div className="chips">
                   {(r.extracted?.skills ?? []).map((s) => (
