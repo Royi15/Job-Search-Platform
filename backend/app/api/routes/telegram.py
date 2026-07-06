@@ -34,7 +34,7 @@ async def unlink(user: CurrentUser, db: DB) -> None:
     await db.commit()
 
 
-async def _handle_start(db: AsyncSession, chat_id: int, payload: str) -> None:
+async def _handle_start(db: AsyncSession, queue, chat_id: int, payload: str) -> None:
     try:
         token = uuid.UUID(payload)
     except ValueError:
@@ -49,8 +49,13 @@ async def _handle_start(db: AsyncSession, chat_id: int, payload: str) -> None:
     user.telegram_chat_id = chat_id
     await db.commit()
     await tg.send_message(
-        chat_id, "✅ Linked! You'll get a message here whenever a matching job is found."
+        chat_id,
+        "✅ Linked! You'll get a message here whenever a matching job is found. "
+        "Any recent matches you missed are on their way now…",
     )
+    # Deliver alerts that matched before linking (the preference-first,
+    # link-second onboarding order would otherwise swallow them).
+    await queue.enqueue_job("deliver_pending_alerts", user.id)
 
 
 @router.post("/webhook", include_in_schema=False)
@@ -74,7 +79,7 @@ async def webhook(
     if chat_id and text.startswith("/start"):
         parts = text.split(maxsplit=1)
         if len(parts) == 2:
-            await _handle_start(db, chat_id, parts[1].strip())
+            await _handle_start(db, request.app.state.arq, chat_id, parts[1].strip())
         else:
             await tg.send_message(
                 chat_id, "Hi! Link your account from the web app to get job alerts."
