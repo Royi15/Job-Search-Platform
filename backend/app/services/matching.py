@@ -16,13 +16,15 @@ def _contains_all(haystack: str, needles: list[str]) -> bool:
 
 
 def job_matches_preference(job: Job, pref: SearchPreference) -> bool:
-    title = job.title.lower()
     full_text = f"{job.title} {job.company or ''} {job.description or ''}".lower()
     location = (job.location or "").lower()
 
     if pref.exclude_keywords and _contains_any(full_text, pref.exclude_keywords):
         return False
-    if pref.title_keywords and not _contains_any(title, pref.title_keywords):
+    # Title keywords match against title OR description: many relevant
+    # postings have vague titles ("Software Engineer 2026 Program") and only
+    # say "student" in the body. exclude_keywords is the noise valve.
+    if pref.title_keywords and not _contains_any(full_text, pref.title_keywords):
         return False
     if pref.must_have_keywords and not _contains_all(full_text, pref.must_have_keywords):
         return False

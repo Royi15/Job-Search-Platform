@@ -42,7 +42,7 @@ CREATE TABLE search_preferences (
     id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id            BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name               TEXT        NOT NULL,                -- "Junior Backend TLV"
-    title_keywords     TEXT[]      NOT NULL,                -- any-of, matched vs job title
+    title_keywords     TEXT[]      NOT NULL,                -- any-of, matched vs title + description
     must_have_keywords TEXT[]      NOT NULL DEFAULT '{}',   -- all-of, matched vs full text
     exclude_keywords   TEXT[]      NOT NULL DEFAULT '{}',   -- none-of
     locations          TEXT[]      NOT NULL DEFAULT '{}',   -- empty = anywhere
