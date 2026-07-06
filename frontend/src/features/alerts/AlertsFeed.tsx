@@ -32,7 +32,7 @@ export default function AlertsFeed() {
         The worker checks LinkedIn every hour; matches also arrive on Telegram.
       </p>
       {loaded && alerts.length === 0 && (
-        <div className="empty">
+        <div className="empty-center">
           <img
             src="/misskalem-at-15658_512.gif"
             alt=""
