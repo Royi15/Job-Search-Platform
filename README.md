@@ -24,7 +24,7 @@ managing many job applications, and getting past automated resume screeners (ATS
 | Backend    | Python / FastAPI (async), served by Uvicorn         |
 | Worker     | ARQ (async task queue + cron) over Redis            |
 | Database   | PostgreSQL 16                                       |
-| Queue      | Redis (Upstash free tier)                           |
+| Queue      | Redis (local, on the same VM)                       |
 | Job source | Bright Data LinkedIn jobs API (Remotive dev fallback) |
 | AI         | Gemini (`gemini-3.1-flash-lite`) via REST           |
 | Hosting    | Azure Standard_B1s Ubuntu VM (systemd + nginx)      |
