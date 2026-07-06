@@ -27,8 +27,16 @@ def _job_embed(job: Job) -> dict:
             {"name": "Company", "value": (job.company or "Unknown")[:1024], "inline": True},
             {"name": "Location", "value": location[:1024], "inline": True},
             {"name": "Source", "value": job.source, "inline": True},
+            # Bottom line with a clickable link. Real embed footers are
+            # plain-text only, so this is a final field with an invisible
+            # (zero-width space) name — renders where a footer would.
+            {
+                "name": "​",
+                "value": "Personal alerts, AI resume tailoring & more → "
+                "[JobPilot](https://job-search-platform-chi.vercel.app)",
+                "inline": False,
+            },
         ],
-        "footer": {"text": "Job Search Platform — student jobs feed"},
     }
 
 
