@@ -34,11 +34,19 @@ class WorkerSettings:
     functions = [parse_resume, run_generation, fetch_and_notify, match_preference]
     cron_jobs = [
         # Hourly on the hour, 09:00-18:00 server-local time (VM timezone is
-        # Asia/Jerusalem) — job boards are quiet at night and Bright Data
-        # bills per scraped record. The 24h search window still catches
-        # anything posted overnight in the 09:00 run.
+        # Asia/Jerusalem), Sunday-Thursday only — the Israeli work week; Fri/Sat
+        # scrapes would mostly burn Bright Data credits on an empty market, and
+        # the 24h search window means Sunday 09:00 catches weekend postings.
+        # Python weekday numbering: Mon=0 ... Fri=4, Sat=5, Sun=6.
         # unique=True prevents overlap if a run is slow.
-        cron(fetch_and_notify, hour=set(range(9, 19)), minute={0}, unique=True, timeout=600),
+        cron(
+            fetch_and_notify,
+            weekday={6, 0, 1, 2, 3},
+            hour=set(range(9, 19)),
+            minute={0},
+            unique=True,
+            timeout=600,
+        ),
     ]
     on_startup = startup
     on_shutdown = shutdown
