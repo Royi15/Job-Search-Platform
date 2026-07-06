@@ -204,9 +204,44 @@ async def match_preference(ctx: dict, preference_id: int) -> str:
                 if await tg.send_message(user.telegram_chat_id, tg.format_job_alert(job)):
                     alert = await db.get(JobAlert, alert_id)
                     alert.notified_at = datetime.now(timezone.utc)
+                await asyncio.sleep(1.1)  # respect Telegram's per-chat rate limit
         await db.commit()
         logger.info("match_preference(%s): %d new alerts", preference_id, created)
         return f"matched={created}"
+
+
+async def deliver_pending_alerts(ctx: dict, user_id: int) -> str:
+    """When a user links (or relinks) Telegram, push the alerts that matched
+    while they weren't linked — the natural onboarding order is "create
+    preference, then link", and without this the backfill matches land in
+    that gap and the user stares at an empty chat assuming linking failed."""
+    async with ctx["db_factory"]() as db:
+        user = await db.get(User, user_id)
+        if user is None or not user.telegram_chat_id:
+            return "user missing or not linked"
+        cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+        alerts = (
+            await db.scalars(
+                select(JobAlert)
+                .where(
+                    JobAlert.user_id == user_id,
+                    JobAlert.notified_at.is_(None),
+                    JobAlert.dismissed.is_(False),
+                    JobAlert.matched_at >= cutoff,
+                )
+                .order_by(JobAlert.matched_at)
+            )
+        ).all()
+
+        delivered = 0
+        for alert in alerts:
+            if await tg.send_message(user.telegram_chat_id, tg.format_job_alert(alert.job)):
+                alert.notified_at = datetime.now(timezone.utc)
+                delivered += 1
+                await db.commit()  # commit per send: a crash loses nothing
+            await asyncio.sleep(1.1)  # Telegram allows ~1 msg/sec per chat
+        logger.info("deliver_pending_alerts(%s): %d delivered", user_id, delivered)
+        return f"delivered={delivered}"
 
 
 async def fetch_and_notify(ctx: dict) -> str:
