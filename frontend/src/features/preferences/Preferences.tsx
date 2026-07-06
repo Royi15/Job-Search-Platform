@@ -66,7 +66,7 @@ export default function Preferences() {
             placeholder="e.g. Junior Backend — Tel Aviv" />
         </div>
         <div>
-          <label>Title keywords (comma separated — any of these in the job title)</label>
+          <label>Keywords (comma separated — any of these in the job title or description)</label>
           <input required value={titles} onChange={(e) => setTitles(e.target.value)}
             placeholder="student, junior, intern, backend" />
         </div>
