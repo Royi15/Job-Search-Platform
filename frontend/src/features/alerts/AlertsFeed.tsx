@@ -33,8 +33,25 @@ export default function AlertsFeed() {
       </p>
       {loaded && alerts.length === 0 && (
         <div className="empty">
-          No matches yet. Make sure you created at least one active search
-          preference — new student jobs are checked against it every hour.
+          <img
+            src="/misskalem-at-15658_512.gif"
+            alt=""
+            className="empty-gif"
+            onError={(e) => (e.currentTarget.style.display = "none")}
+          />
+          <p style={{ margin: "14px 0 4px", fontWeight: 600, color: "var(--text)" }}>
+            Nothing here. Either the market is asleep, or your preferences are
+            pickier than a recruiter.
+          </p>
+          <p style={{ margin: 0 }}>
+            No preference yet?{" "}
+            <Link to="/app/preferences" style={{ color: "var(--blue)", fontWeight: 600 }}>
+              Add one
+            </Link>
+            . Got some? Give the bot a little time — it checks for new jobs
+            every hour. Still quiet in a day or two? Then maybe your keywords
+            need a haircut.
+          </p>
         </div>
       )}
       <div className="stack">
