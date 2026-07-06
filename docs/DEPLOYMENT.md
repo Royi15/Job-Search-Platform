@@ -1,9 +1,13 @@
 # Deployment — Azure Standard_B1s (Ubuntu 22.04/24.04)
 
-One VM runs nginx, the FastAPI API (Uvicorn), the ARQ worker, and PostgreSQL.
-Redis is external (Upstash free tier). Everything is supervised by **systemd** —
-no PM2/Supervisor needed; systemd is already there, survives reboots, and gives
-you journald logs for free.
+One VM runs nginx, the FastAPI API (Uvicorn), the ARQ worker, PostgreSQL, and
+Redis. Everything is supervised by **systemd** — no PM2/Supervisor needed;
+systemd is already there, survives reboots, and gives you journald logs for free.
+
+> **Why local Redis and not a managed free tier (Upstash etc.):** ARQ polls
+> its queue about twice a second, and managed Redis free tiers bill per
+> command — an idle worker burns ~170K commands/day of pure heartbeat.
+> Locally, polling is free and Redis idles at ~10 MB RSS.
 
 ## 0. Sizing reality check (1 vCPU / 1 GiB RAM)
 
@@ -12,6 +16,7 @@ you journald logs for free.
 | PostgreSQL     | ~150 MB (tuned down, see §2) |
 | Uvicorn (1 worker) | ~120 MB |
 | ARQ worker     | ~110 MB |
+| Redis          | ~10 MB  |
 | nginx          | ~10 MB  |
 
 That fits, but **add swap first** — a B1s without swap will OOM-kill Postgres
@@ -27,7 +32,8 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3.12-venv python3-pip postgresql nginx git ufw
+sudo apt install -y python3.12-venv python3-pip postgresql redis-server nginx git ufw
+# redis-server binds to localhost only by default — exactly what we want
 
 # Dedicated non-login user; code lives in /opt/jobsearch
 sudo useradd --system --create-home --shell /usr/sbin/nologin jobsearch

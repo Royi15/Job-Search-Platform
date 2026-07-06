@@ -16,7 +16,7 @@ boards, Telegram delivery) is pushed through Redis to a separate worker process.
 │  - Resume tailoring UI │           │  Uvicorn :8000 — FastAPI (async, 1 worker)   │
 └────────────────────────┘           │     │ SQL (asyncpg)      │ enqueue (arq)     │
                                      │     ▼                    ▼                   │
-┌────────────────────────┐  webhook  │  PostgreSQL 16    ═══ Redis (Upstash) ═══    │
+┌────────────────────────┐  webhook  │  PostgreSQL 16    ═══ Redis (local) ═══      │
 │  Telegram servers      │──────────▶│  (localhost)             │ dequeue           │
 │  (bot API)             │◀──────────│                          ▼                   │
 └────────────────────────┘  sendMsg  │  ARQ worker process (cron + task queue)      │
@@ -54,7 +54,9 @@ boards, Telegram delivery) is pushed through Redis to a separate worker process.
 
 Celery + its beat scheduler costs two extra processes and ~150 MB RSS — a lot on
 a B1s. ARQ is a single asyncio process, speaks the same async idioms as FastAPI,
-has built-in cron, and its Redis protocol works on Upstash's free tier.
+and has built-in cron. Redis itself runs locally on the VM (~10 MB idle):
+managed free tiers bill per command, and a polling queue worker issues ~170K
+commands a day just asking "any jobs?" — colocating the queue makes that free.
 
 ## 2. Core flows
 
