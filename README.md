@@ -1,22 +1,28 @@
-# Job Search Platform
+# 🚀 Job Search Platform
 
 A web platform for students and junior engineers that solves two pains:
 managing many job applications, and getting past automated resume screeners (ATS).
 
-## Features
+**🔗 Live:** [job-search-platform-chi.vercel.app](https://job-search-platform-chi.vercel.app)
 
-1. **Real-Time Job Alerts** — users define search preferences; a background
+## ✨ Features
+
+1. 🔔 **Real-Time Job Alerts** — users define search preferences; a background
    worker polls external job APIs. Every new student job is broadcast to a
    community **Discord channel**, and jobs matching a user's saved criteria
    are pushed personally via a **Telegram bot**.
-2. **ATS Jailbreaker & Resume Tailoring** — upload a PDF resume, paste a job
+2. 🛡️ **ATS Jailbreaker & Resume Tailoring** — upload a PDF resume, paste a job
    description; the system simulates an ATS parser, then uses an LLM to find
    the semantic gap and rewrite sentences to organically inject keywords.
-3. **Kanban Application Tracker** — drag-and-drop CRM board
+3. 🗂️ **Kanban Application Tracker** — drag-and-drop CRM board
    (Applied → Phone Interview → Home Assignment → Technical Interview → Rejected / Offer).
-4. **Magic Cover Letter** — LLM-generated targeted cover letters and LinkedIn messages.
+4. ✍️ **Magic Cover Letter** — LLM-generated targeted cover letters and LinkedIn messages.
+5. 🎤 **Interview Simulator** — a two-stage mock interview built from a resume and
+   a real job description: behavioral warm-up questions, then timed technical
+   questions (15 min each, real-interview weight) with an AI-graded report
+   (score /100, per-question review, strengths/improvements) at the end.
 
-## Stack
+## 🛠️ Stack
 
 | Layer      | Technology                                          |
 |------------|-----------------------------------------------------|
@@ -29,7 +35,7 @@ managing many job applications, and getting past automated resume screeners (ATS
 | AI         | Gemini (`gemini-3.1-flash-lite`) via REST           |
 | Hosting    | Azure Standard_B1s Ubuntu VM (systemd + nginx)      |
 
-## Repository layout
+## 📁 Repository layout
 
 ```
 backend/    FastAPI app, services, ARQ worker (see backend/app/)
@@ -39,7 +45,7 @@ deploy/     systemd units, nginx config, VM setup script
 docs/       ARCHITECTURE.md, DEPLOYMENT.md
 ```
 
-## Quick start (local dev)
+## ⚡ Quick start (local dev)
 
 ```bash
 # 1. Database
