@@ -91,6 +91,7 @@ export interface TailoringResult {
 export interface InterviewEntry {
   stage: "behavioral" | "technical";
   question: string;
+  transition: string | null;
   asked_at: string;
   time_limit_seconds: number | null;
   answer: string | null;

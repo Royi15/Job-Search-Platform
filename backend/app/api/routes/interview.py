@@ -80,6 +80,21 @@ async def get_interview(session_id: int, user: CurrentUser, db: DB):
     return await _owned_session(db, user.id, session_id)
 
 
+@router.post("/{session_id}/abandon", response_model=InterviewSessionOut)
+async def abandon_interview(session_id: int, user: CurrentUser, db: DB):
+    """User-initiated stop. Idempotent: calling it on an already-finished
+    session is a no-op, so the frontend doesn't need to special-case errors.
+    If grading was already queued, that task checks status=='grading' before
+    running and will quietly skip once this flips it to 'abandoned'."""
+    session = await _owned_session(db, user.id, session_id)
+    if session.status in ("active", "grading"):
+        session.status = "abandoned"
+        session.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(session)
+    return session
+
+
 @router.post("/{session_id}/answer", response_model=InterviewSessionOut)
 async def answer_question(
     session_id: int, body: InterviewAnswerRequest, user: CurrentUser, db: DB, queue: Queue
@@ -112,15 +127,20 @@ async def answer_question(
             question = await engine.next_behavioral_question(
                 resume_text, session.job_description, transcript
             )
-            transcript.append(engine.new_entry("behavioral", question))
+            transition = engine.pick_regular_transition(transcript)
+            transcript.append(engine.new_entry("behavioral", question, transition=transition))
         else:
             session.stage = "technical"
             question = await engine.next_technical_question(
                 resume_text, session.job_description, transcript
             )
+            transition = engine.pick_stage_transition(transcript)
             transcript.append(
                 engine.new_entry(
-                    "technical", question, engine.TECHNICAL_TIME_LIMIT_SECONDS
+                    "technical",
+                    question,
+                    engine.TECHNICAL_TIME_LIMIT_SECONDS,
+                    transition=transition,
                 )
             )
     elif session.stage == "technical":
@@ -128,9 +148,13 @@ async def answer_question(
             question = await engine.next_technical_question(
                 resume_text, session.job_description, transcript
             )
+            transition = engine.pick_regular_transition(transcript)
             transcript.append(
                 engine.new_entry(
-                    "technical", question, engine.TECHNICAL_TIME_LIMIT_SECONDS
+                    "technical",
+                    question,
+                    engine.TECHNICAL_TIME_LIMIT_SECONDS,
+                    transition=transition,
                 )
             )
         else:

@@ -8,6 +8,7 @@ the model direct the flow makes it drift; keeping it on a leash doesn't.
 The final X/100 is computed in code from the rubric's dimension scores, so
 the number is deterministic given the LLM's per-dimension judgments.
 """
+import random
 from datetime import datetime, timezone
 from typing import Any
 
@@ -23,6 +24,46 @@ FIRST_QUESTION = (
     "brings you to this role."
 )
 
+# Short acknowledgment lines shown before the next question, so questions
+# don't just snap in instantly — no LLM call, picked without repeats within
+# a session for as long as the pool allows.
+REGULAR_TRANSITIONS = [
+    "Got it, thanks for sharing.",
+    "Nice, that's helpful context.",
+    "Good — thanks, let's keep going.",
+    "Appreciate the detail there.",
+    "Interesting, thanks for that.",
+    "Okay, noted. Moving on.",
+    "Thanks, that gives me a good picture.",
+    "Solid answer — let's continue.",
+    "Great, thanks for explaining that.",
+    "Cool, let's move to the next one.",
+]
+
+STAGE_TRANSITIONS = [
+    "That wraps up the intro questions — nice work. Let's shift into the "
+    "technical round. Each question below is timed, so take a breath first.",
+    "Thanks, that's a great foundation. Now for the technical part — this "
+    "section is timed, so read carefully before you start typing.",
+    "Good, that covers the background. Time for the technical questions — "
+    "you'll have a timer on each one, so pace yourself.",
+]
+
+
+def _pick_transition(pool: list[str], transcript: list[dict[str, Any]]) -> str:
+    """Avoid repeating a transition line within the same session."""
+    used = {e.get("transition") for e in transcript if e.get("transition")}
+    remaining = [t for t in pool if t not in used]
+    return random.choice(remaining or pool)
+
+
+def pick_regular_transition(transcript: list[dict[str, Any]]) -> str:
+    return _pick_transition(REGULAR_TRANSITIONS, transcript)
+
+
+def pick_stage_transition(transcript: list[dict[str, Any]]) -> str:
+    return _pick_transition(STAGE_TRANSITIONS, transcript)
+
 INTERVIEWER_SYSTEM = """\
 You are a professional but friendly interviewer at the company hiring for the
 job below. You interview students and junior candidates: rigorous, never
@@ -30,10 +71,16 @@ condescending. You output ONLY what you are asked to output — no preambles,
 no meta commentary."""
 
 
-def new_entry(stage: str, question: str, time_limit: int | None = None) -> dict[str, Any]:
+def new_entry(
+    stage: str,
+    question: str,
+    time_limit: int | None = None,
+    transition: str | None = None,
+) -> dict[str, Any]:
     return {
         "stage": stage,
         "question": question,
+        "transition": transition,
         "asked_at": datetime.now(timezone.utc).isoformat(),
         "time_limit_seconds": time_limit,
         "answer": None,

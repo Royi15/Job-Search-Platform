@@ -191,7 +191,7 @@ CREATE TABLE interview_sessions (
     stage           TEXT        NOT NULL DEFAULT 'behavioral'
                     CHECK (stage IN ('behavioral', 'technical', 'grading', 'done')),
     status          TEXT        NOT NULL DEFAULT 'active'
-                    CHECK (status IN ('active', 'grading', 'done', 'failed')),
+                    CHECK (status IN ('active', 'grading', 'done', 'failed', 'abandoned')),
     transcript      JSONB       NOT NULL DEFAULT '[]',
     report          JSONB,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
