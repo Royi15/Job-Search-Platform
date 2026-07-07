@@ -5,8 +5,10 @@ from app.models.job import Job, JobAlert
 from app.models.application import Application, ApplicationEvent, ApplicationStatus
 from app.models.resume import Resume
 from app.models.generation import AIGeneration, GenerationKind
+from app.models.interview import InterviewSession
 
 __all__ = [
+    "InterviewSession",
     "User",
     "SearchPreference",
     "Job",

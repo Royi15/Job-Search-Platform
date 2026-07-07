@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.workers.tasks import (
     deliver_pending_alerts,
     fetch_and_notify,
+    grade_interview,
     match_preference,
     parse_resume,
     run_generation,
@@ -38,6 +39,7 @@ class WorkerSettings:
         fetch_and_notify,
         match_preference,
         deliver_pending_alerts,
+        grade_interview,
     ]
     cron_jobs = [
         # Hourly on the hour, 09:00-18:00 server-local time (VM timezone is

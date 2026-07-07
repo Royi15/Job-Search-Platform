@@ -175,3 +175,26 @@ CREATE TABLE ai_generations (
     completed_at    TIMESTAMPTZ
 );
 CREATE INDEX idx_generations_user ON ai_generations (user_id, created_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Simulated interviews. The backend drives a fixed stage machine
+-- (behavioral -> technical -> grading -> done); the transcript accumulates
+-- as JSONB entries: {stage, question, asked_at, time_limit_seconds,
+-- answer, answered_at, overtime}. The final report (score, summary,
+-- per-question reviews) is produced by the worker.
+-- ---------------------------------------------------------------------------
+CREATE TABLE interview_sessions (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    resume_id       BIGINT      REFERENCES resumes(id) ON DELETE SET NULL,
+    job_description TEXT        NOT NULL,
+    stage           TEXT        NOT NULL DEFAULT 'behavioral'
+                    CHECK (stage IN ('behavioral', 'technical', 'grading', 'done')),
+    status          TEXT        NOT NULL DEFAULT 'active'
+                    CHECK (status IN ('active', 'grading', 'done', 'failed')),
+    transcript      JSONB       NOT NULL DEFAULT '[]',
+    report          JSONB,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at    TIMESTAMPTZ
+);
+CREATE INDEX idx_interviews_user ON interview_sessions (user_id, created_at DESC);

@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     AIGeneration,
     GenerationKind,
+    InterviewSession,
     Job,
     JobAlert,
     Resume,
@@ -21,6 +22,7 @@ from app.models import (
     User,
 )
 from app.services import cover_letter, discord, tailoring
+from app.services import interview as interview_engine
 from app.services import telegram as tg
 from app.services.ats_parser import (
     extract_pdf_text,
@@ -208,6 +210,35 @@ async def match_preference(ctx: dict, preference_id: int) -> str:
         await db.commit()
         logger.info("match_preference(%s): %d new alerts", preference_id, created)
         return f"matched={created}"
+
+
+async def grade_interview(ctx: dict, session_id: int) -> str:
+    """Evaluate a finished interview transcript and store the report.
+    Runs in the worker: it's the one heavyweight LLM call of the flow."""
+    async with ctx["db_factory"]() as db:
+        session = await db.get(InterviewSession, session_id)
+        if session is None or session.status != "grading":
+            return "session missing or not awaiting grading"
+
+        resume_text = "(resume unavailable)"
+        if session.resume_id:
+            resume = await db.get(Resume, session.resume_id)
+            if resume and resume.raw_text:
+                resume_text = resume.raw_text
+
+        try:
+            session.report = await interview_engine.grade_transcript(
+                resume_text, session.job_description, session.transcript
+            )
+            session.status = "done"
+            session.stage = "done"
+        except Exception as exc:
+            logger.exception("Interview grading %s failed", session_id)
+            session.report = {"error": f"{type(exc).__name__}: {exc}"[:500].strip(": ")}
+            session.status = "failed"
+        session.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+        return f"graded session {session_id}: {session.status}"
 
 
 async def deliver_pending_alerts(ctx: dict, user_id: int) -> str:
