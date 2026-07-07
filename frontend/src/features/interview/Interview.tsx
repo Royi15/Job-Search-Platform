@@ -55,6 +55,13 @@ export default function Interview() {
   const [error, setError] = useState("");
   const answerRef = useRef("");
   answerRef.current = answer;
+  const chatLogRef = useRef<HTMLDivElement>(null);
+
+  // Keep the newest message in view as the transcript grows
+  useEffect(() => {
+    const el = chatLogRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [session?.transcript.length]);
 
   // Resume an in-progress interview after a page refresh
   useEffect(() => {
@@ -119,6 +126,26 @@ export default function Interview() {
     },
     [session, busy]
   );
+
+  async function stopInterview() {
+    if (!session) return;
+    if (
+      !window.confirm(
+        "Stop this interview and go back? Your progress won't be saved as a finished interview."
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      await api.post(`/interviews/${session.id}/abandon`);
+    } catch {
+      // best-effort — let the user leave either way, it's a soft action
+    } finally {
+      setBusy(false);
+      setSession(null);
+      setView("setup");
+    }
+  }
 
   if (view === "loading") return <div className="page-loader">Loading…</div>;
 
@@ -265,62 +292,73 @@ export default function Interview() {
   }
 
   // ---------- Live interview ----------
-  const current = session.transcript[session.transcript.length - 1];
   const answered = session.transcript.filter((e) => e.answer !== null).length;
   const total = 6; // 3 behavioral + 3 technical
 
   return (
-    <div style={{ maxWidth: 860 }}>
-      <h1>Interview Simulator</h1>
-      <p className="page-sub">
-        {STAGE_LABELS[session.stage]} · question {answered + 1} of {total}
-      </p>
+    <div className="interview-shell">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div>
+          <h1>Interview Simulator</h1>
+          <p className="page-sub" style={{ margin: 0 }}>
+            {STAGE_LABELS[session.stage]} · question {answered + 1} of {total}
+          </p>
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={stopInterview} disabled={busy}>
+          Stop interview
+        </button>
+      </div>
 
-      <div className="chat-log">
-        {session.transcript.map((entry, i) => (
-          <div key={i}>
-            <div className="bubble q">
-              <span className="who">Interviewer</span>
-              {entry.question}
-              {i === session.transcript.length - 1 && entry.time_limit_seconds && (
-                <div style={{ marginTop: 8 }}>
-                  <Timer
-                    askedAt={entry.asked_at}
-                    limitSeconds={entry.time_limit_seconds}
-                    onExpire={() => submitAnswer(answerRef.current || "(ran out of time)")}
-                  />
+      <div className="chat-card" style={{ marginTop: 20 }}>
+        <div className="chat-log" ref={chatLogRef}>
+          {session.transcript.map((entry, i) => (
+            <div key={i}>
+              <div className="bubble q">
+                <span className="who">Interviewer</span>
+                {entry.transition && (
+                  <div className="transition-note">{entry.transition}</div>
+                )}
+                {entry.question}
+                {i === session.transcript.length - 1 && entry.time_limit_seconds && (
+                  <div style={{ marginTop: 8 }}>
+                    <Timer
+                      askedAt={entry.asked_at}
+                      limitSeconds={entry.time_limit_seconds}
+                      onExpire={() => submitAnswer(answerRef.current || "(ran out of time)")}
+                    />
+                  </div>
+                )}
+              </div>
+              {entry.answer !== null && (
+                <div className="bubble a">
+                  <span className="who">You</span>
+                  {entry.answer}
                 </div>
               )}
             </div>
-            {entry.answer !== null && (
-              <div className="bubble a">
-                <span className="who">You</span>
-                {entry.answer}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (answer.trim()) submitAnswer(answer);
-        }}
-        style={{ marginTop: 14, display: "grid", gap: 10 }}
-      >
-        <textarea
-          rows={5}
-          placeholder="Type your answer… (be specific, like you would out loud)"
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          disabled={busy}
-        />
-        {error && <div className="auth-error">{error}</div>}
-        <button className="btn btn-blue" disabled={busy || !answer.trim()} style={{ justifySelf: "start" }}>
-          {busy ? "Interviewer is thinking…" : "Send answer"}
-        </button>
-      </form>
+        <form
+          className="chat-input-bar"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (answer.trim()) submitAnswer(answer);
+          }}
+        >
+          <textarea
+            rows={3}
+            placeholder="Type your answer… (be specific, like you would out loud)"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            disabled={busy}
+          />
+          <button className="btn btn-blue" disabled={busy || !answer.trim()}>
+            {busy ? "…" : "Send"}
+          </button>
+        </form>
+      </div>
+      {error && <div className="auth-error" style={{ marginTop: 10 }}>{error}</div>}
     </div>
   );
 }
