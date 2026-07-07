@@ -16,6 +16,7 @@ from app.api.routes import (
     ai,
     applications,
     auth,
+    interview,
     jobs,
     preferences,
     resumes,
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
         applications.router,
         resumes.router,
         ai.router,
+        interview.router,
         telegram.router,
     ):
         app.include_router(router)

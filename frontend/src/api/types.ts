@@ -88,6 +88,48 @@ export interface TailoringResult {
   extra_tips: string[];
 }
 
+export interface InterviewEntry {
+  stage: "behavioral" | "technical";
+  question: string;
+  asked_at: string;
+  time_limit_seconds: number | null;
+  answer: string | null;
+  answered_at: string | null;
+  overtime: boolean;
+}
+
+export interface TechnicalReview {
+  question_index: number;
+  score: number;
+  review: string;
+  better_answer_hint?: string;
+  overtime_penalty_applied?: boolean;
+}
+
+export interface InterviewReport {
+  score?: number;
+  summary?: string;
+  strengths?: string[];
+  improvements?: string[];
+  behavioral?: {
+    communication: number;
+    structure: number;
+    relevance: number;
+    comments: string;
+  };
+  technical_reviews?: TechnicalReview[];
+  error?: string;
+}
+
+export interface InterviewSession {
+  id: number;
+  stage: "behavioral" | "technical" | "grading" | "done";
+  status: "active" | "grading" | "done" | "failed";
+  transcript: InterviewEntry[];
+  report: InterviewReport | null;
+  created_at: string;
+}
+
 export interface Generation {
   id: number;
   kind: "resume_tailoring" | "cover_letter" | "linkedin_message";

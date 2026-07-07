@@ -8,6 +8,7 @@ const NAV = [
   { to: "/app/resumes", label: "📄 Resumes" },
   { to: "/app/tailor", label: "🛡️ ATS Tailor" },
   { to: "/app/cover-letter", label: "✨ Cover Letter" },
+  { to: "/app/interview", label: "🎤 Interview Sim" },
   { to: "/app/settings", label: "⚙️ Settings" },
 ];
 

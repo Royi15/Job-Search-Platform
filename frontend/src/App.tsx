@@ -9,6 +9,7 @@ import Preferences from "./features/preferences/Preferences";
 import Resumes from "./features/resumes/Resumes";
 import Tailor from "./features/ai/Tailor";
 import CoverLetter from "./features/ai/CoverLetter";
+import Interview from "./features/interview/Interview";
 import Settings from "./features/settings/Settings";
 import type { ReactNode } from "react";
 
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="resumes" element={<Resumes />} />
             <Route path="tailor" element={<Tailor />} />
             <Route path="cover-letter" element={<CoverLetter />} />
+            <Route path="interview" element={<Interview />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
