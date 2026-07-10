@@ -37,6 +37,45 @@ async def _resume_text(db, session: InterviewSession) -> str:
     return "(resume unavailable)"
 
 
+async def _excluded_questions(
+    db, user_id: int, resume_id: int | None, exclude_session_id: int
+) -> list[str]:
+    """Questions already asked in this user's OTHER interviews with the same
+    resume, so a repeat practice run gets fresh questions instead of the same
+    ones the resume naturally draws out every time."""
+    if resume_id is None:
+        return []
+    transcripts = (
+        await db.scalars(
+            select(InterviewSession.transcript).where(
+                InterviewSession.user_id == user_id,
+                InterviewSession.resume_id == resume_id,
+                InterviewSession.id != exclude_session_id,
+            )
+        )
+    ).all()
+    questions = [e["question"] for t in transcripts for e in t if e.get("question")]
+    return questions[-40:]  # cap so the prompt never grows unbounded
+
+
+async def _title_for(db, job_description: str) -> str:
+    """Same JD text always gets the same title: reuse a past title for this
+    exact JD (ignoring whitespace differences) instead of asking the LLM
+    again, which could phrase it slightly differently each time."""
+    normalized = " ".join(job_description.split())
+    rows = (
+        await db.execute(
+            select(InterviewSession.job_description, InterviewSession.title).where(
+                InterviewSession.title.is_not(None)
+            )
+        )
+    ).all()
+    for jd, title in rows:
+        if " ".join(jd.split()) == normalized:
+            return title
+    return await engine.generate_title(job_description)
+
+
 @router.post("", response_model=InterviewSessionOut, status_code=status.HTTP_201_CREATED)
 async def start_interview(body: InterviewStartRequest, user: CurrentUser, db: DB):
     resume = await db.scalar(
@@ -49,10 +88,12 @@ async def start_interview(body: InterviewStartRequest, user: CurrentUser, db: DB
             status.HTTP_409_CONFLICT, "Resume is still being parsed — try again shortly"
         )
 
+    title = await _title_for(db, body.job_description)
     session = InterviewSession(
         user_id=user.id,
         resume_id=resume.id,
         job_description=body.job_description,
+        title=title,
         transcript=[engine.new_entry("behavioral", engine.FIRST_QUESTION)],
     )
     db.add(session)
@@ -139,18 +180,19 @@ async def answer_question(
     behavioral_done = sum(1 for e in transcript if e["stage"] == "behavioral")
     technical_done = sum(1 for e in transcript if e["stage"] == "technical")
     resume_text = await _resume_text(db, session)
+    excluded = await _excluded_questions(db, user.id, session.resume_id, session.id)
 
     if session.stage == "behavioral":
         if behavioral_done < engine.BEHAVIORAL_QUESTIONS:
             question = await engine.next_behavioral_question(
-                resume_text, session.job_description, transcript
+                resume_text, session.job_description, transcript, excluded
             )
             transition = engine.pick_regular_transition(transcript)
             transcript.append(engine.new_entry("behavioral", question, transition=transition))
         else:
             session.stage = "technical"
             question = await engine.next_technical_question(
-                resume_text, session.job_description, transcript
+                resume_text, session.job_description, transcript, excluded
             )
             transition = engine.pick_stage_transition(transcript)
             transcript.append(
@@ -164,7 +206,7 @@ async def answer_question(
     elif session.stage == "technical":
         if technical_done < engine.TECHNICAL_QUESTIONS:
             question = await engine.next_technical_question(
-                resume_text, session.job_description, transcript
+                resume_text, session.job_description, transcript, excluded
             )
             transition = engine.pick_regular_transition(transcript)
             transcript.append(

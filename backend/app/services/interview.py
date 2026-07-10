@@ -105,8 +105,22 @@ def _format_transcript(transcript: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _excluded_block(excluded_questions: list[str] | None) -> str:
+    if not excluded_questions:
+        return ""
+    bullets = "\n".join(f"- {q}" for q in excluded_questions[-40:])
+    return f"""
+This candidate has practiced with this same resume before. Do NOT ask any of
+these already-used questions again — find a fresh angle instead:
+{bullets}
+"""
+
+
 async def next_behavioral_question(
-    resume_text: str, job_description: str, transcript: list[dict[str, Any]]
+    resume_text: str,
+    job_description: str,
+    transcript: list[dict[str, Any]],
+    excluded_questions: list[str] | None = None,
 ) -> str:
     prompt = f"""\
 You are in stage 1 of the interview (behavioral / getting to know the
@@ -118,7 +132,7 @@ already asked.
 
 Questions already asked:
 {_format_transcript(transcript)}
-
+{_excluded_block(excluded_questions)}
 JOB DESCRIPTION:
 ---
 {job_description[:6000]}
@@ -135,7 +149,10 @@ Output: the question text only, one or two sentences."""
 
 
 async def next_technical_question(
-    resume_text: str, job_description: str, transcript: list[dict[str, Any]]
+    resume_text: str,
+    job_description: str,
+    transcript: list[dict[str, Any]],
+    excluded_questions: list[str] | None = None,
 ) -> str:
     prompt = f"""\
 You are in stage 2 of the interview (technical, timed) — this should feel
@@ -157,7 +174,7 @@ Do not repeat topics already covered.
 
 Questions already asked:
 {_format_transcript(transcript)}
-
+{_excluded_block(excluded_questions)}
 JOB DESCRIPTION:
 ---
 {job_description[:6000]}
@@ -171,6 +188,42 @@ CANDIDATE RESUME (for calibration):
 Output: the question text only."""
     question = await llm.generate(prompt, system=INTERVIEWER_SYSTEM, temperature=0.8)
     return question.strip().strip('"')
+
+
+TITLE_PROMPT = """\
+Extract a short label for this job posting in EXACTLY this format:
+Company - Job Title
+
+Rules:
+- Company name first, then " - ", then a concise job title.
+- If the text never states a company name, use "Unknown Company" in its place.
+- Trim filler from the title (e.g. "(Student Position)", "2026 Program") —
+  keep just the core role name.
+- No quotes, no extra words, no trailing punctuation.
+
+Examples:
+Abra - Operations & Control Coordinator
+Mobileye - Junior QA Engineer
+Unknown Company - Software Engineering Intern
+
+JOB DESCRIPTION:
+---
+{job_description}
+---
+
+Output: the label only, nothing else."""
+
+
+async def generate_title(job_description: str) -> str:
+    try:
+        raw = await llm.generate(
+            TITLE_PROMPT.format(job_description=job_description[:6000]),
+            temperature=0,
+        )
+        title = raw.strip().strip('"')[:100]
+        return title or job_description[:60]
+    except Exception:
+        return job_description[:60]
 
 
 GRADING_PROMPT = """\

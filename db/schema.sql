@@ -188,6 +188,7 @@ CREATE TABLE interview_sessions (
     user_id         BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     resume_id       BIGINT      REFERENCES resumes(id) ON DELETE SET NULL,
     job_description TEXT        NOT NULL,
+    title           TEXT,                                    -- LLM-derived label, cached per-JD-text
     stage           TEXT        NOT NULL DEFAULT 'behavioral'
                     CHECK (stage IN ('behavioral', 'technical', 'grading', 'done')),
     status          TEXT        NOT NULL DEFAULT 'active'
