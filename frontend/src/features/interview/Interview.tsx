@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import CodeMirror from "@uiw/react-codemirror";
+import { python } from "@codemirror/lang-python";
+import { javascript } from "@codemirror/lang-javascript";
+import { java } from "@codemirror/lang-java";
+import { cpp } from "@codemirror/lang-cpp";
+import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import api from "../../api/client";
 import type { InterviewSession } from "../../api/types";
 import { useParsedResumes } from "../ai/useGeneration";
@@ -10,6 +16,28 @@ const STAGE_LABELS: Record<string, string> = {
   grading: "Grading",
   done: "Done",
 };
+
+const QUESTION_REVEAL_DELAY_MS = 1000;
+
+type CodeLang = "python" | "javascript" | "java" | "cpp" | "text";
+
+const LANG_OPTIONS: { value: CodeLang; label: string }[] = [
+  { value: "python", label: "Python" },
+  { value: "javascript", label: "JavaScript / TypeScript" },
+  { value: "java", label: "Java" },
+  { value: "cpp", label: "C++" },
+  { value: "text", label: "Plain text / pseudocode" },
+];
+
+function langExtension(lang: CodeLang) {
+  switch (lang) {
+    case "python": return [python()];
+    case "javascript": return [javascript({ typescript: true })];
+    case "java": return [java()];
+    case "cpp": return [cpp()];
+    default: return [];
+  }
+}
 
 function Timer({ askedAt, limitSeconds, onExpire }: {
   askedAt: string;
@@ -51,16 +79,39 @@ export default function Interview() {
   const [resumeId, setResumeId] = useState("");
   const [jd, setJd] = useState("");
   const [answer, setAnswer] = useState("");
+  const [code, setCode] = useState("");
+  const [codeLang, setCodeLang] = useState<CodeLang>("python");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const answerRef = useRef("");
   answerRef.current = answer;
+  const codeRef = useRef("");
+  codeRef.current = code;
+  const codeLangRef = useRef<CodeLang>("python");
+  codeLangRef.current = codeLang;
+  const codeExtensions = useMemo(() => langExtension(codeLang), [codeLang]);
   const chatLogRef = useRef<HTMLDivElement>(null);
 
   // Keep the newest message in view as the transcript grows
   useEffect(() => {
     const el = chatLogRef.current;
     if (el) el.scrollTop = el.scrollHeight;
+  }, [session?.transcript.length]);
+
+  // The interviewer "sends" the transition line first, then the question
+  // a beat later — like a real person typing two messages, not a robot
+  // dumping both at once. Only the newest entry ever animates; anything
+  // already in history (e.g. after a page refresh) renders instantly.
+  const [questionRevealed, setQuestionRevealed] = useState(true);
+  useEffect(() => {
+    const transcript = session?.transcript ?? [];
+    const latest = transcript[transcript.length - 1];
+    if (latest && latest.answer === null && latest.transition) {
+      setQuestionRevealed(false);
+      const t = setTimeout(() => setQuestionRevealed(true), QUESTION_REVEAL_DELAY_MS);
+      return () => clearTimeout(t);
+    }
+    setQuestionRevealed(true);
   }, [session?.transcript.length]);
 
   // Resume an in-progress interview after a page refresh
@@ -118,6 +169,7 @@ export default function Interview() {
         );
         setSession(data);
         setAnswer("");
+        setCode("");
       } catch (err: any) {
         setError(err.response?.data?.detail ?? "Could not submit — try again");
       } finally {
@@ -126,6 +178,15 @@ export default function Interview() {
     },
     [session, busy]
   );
+
+  // The code editor is a separate pane, but the grader only sees plain text —
+  // fold both boxes into one answer, labeled, so nothing changes server-side.
+  function composeAnswer(text: string, codeText: string, lang: CodeLang): string {
+    const trimmedCode = codeText.trim();
+    if (!trimmedCode) return text;
+    const langLabel = LANG_OPTIONS.find((o) => o.value === lang)?.label ?? lang;
+    return `${text}\n\nCODE (${langLabel}):\n${trimmedCode}`;
+  }
 
   async function stopInterview() {
     if (!session) return;
@@ -294,9 +355,89 @@ export default function Interview() {
   // ---------- Live interview ----------
   const answered = session.transcript.filter((e) => e.answer !== null).length;
   const total = 6; // 3 behavioral + 3 technical
+  const lastIndex = session.transcript.length - 1;
+  const isTechnicalStage = session.stage === "technical";
+
+  const chatPane = (
+    <div className="chat-card">
+      <div className="chat-log" ref={chatLogRef}>
+        {session.transcript.map((entry, i) => {
+          const isLatest = i === lastIndex;
+          const showQuestion = !isLatest || questionRevealed || !entry.transition;
+          return (
+            <div key={i}>
+              {entry.transition && (
+                <div className="bubble q">
+                  <span className="who">Interviewer</span>
+                  {entry.transition}
+                </div>
+              )}
+              {isLatest && !showQuestion ? (
+                <div className="bubble q typing-bubble">
+                  <span className="who">Interviewer</span>
+                  <span className="typing-dots"><span /><span /><span /></span>
+                </div>
+              ) : (
+                <div className="bubble q">
+                  <span className="who">Interviewer</span>
+                  {entry.question}
+                  {isLatest && entry.time_limit_seconds && (
+                    <div style={{ marginTop: 8 }}>
+                      <Timer
+                        askedAt={entry.asked_at}
+                        limitSeconds={entry.time_limit_seconds}
+                        onExpire={() =>
+                          submitAnswer(
+                            composeAnswer(
+                              answerRef.current || "(ran out of time)",
+                              codeRef.current,
+                              codeLangRef.current
+                            )
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              {entry.answer !== null && (
+                <div className="bubble a">
+                  <span className="who">You</span>
+                  {entry.answer}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <form
+        className="chat-input-bar"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (answer.trim() || code.trim()) submitAnswer(composeAnswer(answer, code, codeLang));
+        }}
+      >
+        <textarea
+          rows={3}
+          placeholder={
+            isTechnicalStage
+              ? "Explain your approach… (use the code editor on the right for actual code)"
+              : "Type your answer… (be specific, like you would out loud)"
+          }
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          disabled={busy}
+        />
+        <button className="btn btn-blue" disabled={busy || !(answer.trim() || code.trim())}>
+          {busy ? "…" : "Send"}
+        </button>
+      </form>
+    </div>
+  );
 
   return (
-    <div className="interview-shell">
+    <div className={isTechnicalStage ? "interview-shell interview-shell-wide" : "interview-shell"}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
         <div>
           <h1>Interview Simulator</h1>
@@ -309,55 +450,37 @@ export default function Interview() {
         </button>
       </div>
 
-      <div className="chat-card" style={{ marginTop: 20 }}>
-        <div className="chat-log" ref={chatLogRef}>
-          {session.transcript.map((entry, i) => (
-            <div key={i}>
-              <div className="bubble q">
-                <span className="who">Interviewer</span>
-                {entry.transition && (
-                  <div className="transition-note">{entry.transition}</div>
-                )}
-                {entry.question}
-                {i === session.transcript.length - 1 && entry.time_limit_seconds && (
-                  <div style={{ marginTop: 8 }}>
-                    <Timer
-                      askedAt={entry.asked_at}
-                      limitSeconds={entry.time_limit_seconds}
-                      onExpire={() => submitAnswer(answerRef.current || "(ran out of time)")}
-                    />
-                  </div>
-                )}
-              </div>
-              {entry.answer !== null && (
-                <div className="bubble a">
-                  <span className="who">You</span>
-                  {entry.answer}
-                </div>
-              )}
+      {isTechnicalStage ? (
+        <div className="interview-split" style={{ marginTop: 20 }}>
+          {chatPane}
+          <div className="code-panel">
+            <div className="code-panel-header">
+              <span>Code (optional)</span>
+              <select
+                value={codeLang}
+                onChange={(e) => setCodeLang(e.target.value as CodeLang)}
+                disabled={busy}
+              >
+                {LANG_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
-          ))}
+            <CodeMirror
+              className="code-panel-editor"
+              value={code}
+              onChange={setCode}
+              theme={vscodeDark}
+              extensions={codeExtensions}
+              editable={!busy}
+              height="100%"
+              placeholder="// Optional — write code here if the question calls for it"
+            />
+          </div>
         </div>
-
-        <form
-          className="chat-input-bar"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (answer.trim()) submitAnswer(answer);
-          }}
-        >
-          <textarea
-            rows={3}
-            placeholder="Type your answer… (be specific, like you would out loud)"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={busy}
-          />
-          <button className="btn btn-blue" disabled={busy || !answer.trim()}>
-            {busy ? "…" : "Send"}
-          </button>
-        </form>
-      </div>
+      ) : (
+        <div style={{ marginTop: 20 }}>{chatPane}</div>
+      )}
       {error && <div className="auth-error" style={{ marginTop: 10 }}>{error}</div>}
     </div>
   );
