@@ -18,6 +18,7 @@ class InterviewSessionOut(BaseModel):
 
     id: int
     job_description: str
+    title: str | None
     stage: str
     status: str
     transcript: list[dict[str, Any]]

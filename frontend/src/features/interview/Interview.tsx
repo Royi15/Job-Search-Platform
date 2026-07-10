@@ -298,8 +298,9 @@ export default function Interview() {
               >
                 <h3 style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: 0 }}>
                   <span>
-                    {h.job_description.slice(0, 70)}
-                    {h.job_description.length > 70 ? "…" : ""}
+                    {h.title ??
+                      h.job_description.slice(0, 70) +
+                        (h.job_description.length > 70 ? "…" : "")}
                   </span>
                   {h.status === "done" && (
                     <span className="badge done">{h.report?.score ?? "?"}/100</span>

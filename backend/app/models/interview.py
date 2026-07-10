@@ -19,6 +19,7 @@ class InterviewSession(Base):
         BigInteger, ForeignKey("resumes.id", ondelete="SET NULL")
     )
     job_description: Mapped[str] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
     stage: Mapped[str] = mapped_column(Text, server_default=text("'behavioral'"))
     status: Mapped[str] = mapped_column(Text, server_default=text("'active'"))
     transcript: Mapped[list[dict[str, Any]]] = mapped_column(
