@@ -124,8 +124,9 @@ export interface InterviewReport {
 
 export interface InterviewSession {
   id: number;
+  job_description: string;
   stage: "behavioral" | "technical" | "grading" | "done";
-  status: "active" | "grading" | "done" | "failed";
+  status: "active" | "grading" | "done" | "failed" | "abandoned";
   transcript: InterviewEntry[];
   report: InterviewReport | null;
   created_at: string;

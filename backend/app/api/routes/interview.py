@@ -61,6 +61,17 @@ async def start_interview(body: InterviewStartRequest, user: CurrentUser, db: DB
     return session
 
 
+@router.get("", response_model=list[InterviewSessionOut])
+async def list_interviews(user: CurrentUser, db: DB):
+    result = await db.scalars(
+        select(InterviewSession)
+        .where(InterviewSession.user_id == user.id)
+        .order_by(InterviewSession.created_at.desc())
+        .limit(30)
+    )
+    return result.all()
+
+
 @router.get("/current", response_model=InterviewSessionOut)
 async def current_interview(user: CurrentUser, db: DB):
     """Latest session — lets a page refresh resume an interview in progress."""
@@ -78,6 +89,13 @@ async def current_interview(user: CurrentUser, db: DB):
 @router.get("/{session_id}", response_model=InterviewSessionOut)
 async def get_interview(session_id: int, user: CurrentUser, db: DB):
     return await _owned_session(db, user.id, session_id)
+
+
+@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_interview(session_id: int, user: CurrentUser, db: DB) -> None:
+    session = await _owned_session(db, user.id, session_id)
+    await db.delete(session)
+    await db.commit()
 
 
 @router.post("/{session_id}/abandon", response_model=InterviewSessionOut)

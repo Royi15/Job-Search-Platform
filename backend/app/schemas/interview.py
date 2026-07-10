@@ -17,6 +17,7 @@ class InterviewSessionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    job_description: str
     stage: str
     status: str
     transcript: list[dict[str, Any]]

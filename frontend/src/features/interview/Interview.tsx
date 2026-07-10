@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { Link } from "react-router-dom";
 import CodeMirror from "@uiw/react-codemirror";
 import { python } from "@codemirror/lang-python";
@@ -75,6 +75,7 @@ function Timer({ askedAt, limitSeconds, onExpire }: {
 export default function Interview() {
   const resumes = useParsedResumes();
   const [session, setSession] = useState<InterviewSession | null>(null);
+  const [history, setHistory] = useState<InterviewSession[]>([]);
   const [view, setView] = useState<"loading" | "setup" | "live">("loading");
   const [resumeId, setResumeId] = useState("");
   const [jd, setJd] = useState("");
@@ -114,8 +115,16 @@ export default function Interview() {
     setQuestionRevealed(true);
   }, [session?.transcript.length]);
 
+  const loadHistory = useCallback(() => {
+    api
+      .get<InterviewSession[]>("/interviews")
+      .then((r) => setHistory(r.data))
+      .catch(() => {});
+  }, []);
+
   // Resume an in-progress interview after a page refresh
   useEffect(() => {
+    loadHistory();
     api
       .get<InterviewSession>("/interviews/current")
       .then((r) => {
@@ -127,7 +136,20 @@ export default function Interview() {
         }
       })
       .catch(() => setView("setup"));
-  }, []);
+  }, [loadHistory]);
+
+  async function openPastInterview(id: number) {
+    const { data } = await api.get<InterviewSession>(`/interviews/${id}`);
+    setSession(data);
+    setView("live"); // status-based branches below render the report/grading view
+  }
+
+  async function deletePastInterview(e: MouseEvent, id: number) {
+    e.stopPropagation(); // don't also trigger the row's "open report" click
+    if (!window.confirm("Delete this interview permanently? This can't be undone.")) return;
+    await api.delete(`/interviews/${id}`);
+    loadHistory();
+  }
 
   // Poll while the worker grades
   useEffect(() => {
@@ -135,9 +157,10 @@ export default function Interview() {
     const poll = setInterval(async () => {
       const { data } = await api.get<InterviewSession>(`/interviews/${session.id}`);
       setSession(data);
+      if (data.status !== "grading") loadHistory(); // report is ready — refresh the list
     }, 2500);
     return () => clearInterval(poll);
-  }, [session?.id, session?.status]);
+  }, [session?.id, session?.status, loadHistory]);
 
   async function start(e: FormEvent) {
     e.preventDefault();
@@ -205,6 +228,7 @@ export default function Interview() {
       setBusy(false);
       setSession(null);
       setView("setup");
+      loadHistory();
     }
   }
 
@@ -212,7 +236,7 @@ export default function Interview() {
 
   // ---------- Setup ----------
   if (view === "setup" || !session) {
-    return (
+    const formColumn = (
       <div>
         <h1>Interview Simulator</h1>
         <p className="page-sub">
@@ -254,6 +278,51 @@ export default function Interview() {
             </p>
           </form>
         )}
+      </div>
+    );
+
+    if (history.length === 0) return formColumn;
+
+    return (
+      <div className="interview-setup-grid">
+        {formColumn}
+        <div className="interview-history-panel">
+          <h2>Past interviews</h2>
+          <div className="stack">
+            {history.map((h) => (
+              <div
+                className="panel"
+                key={h.id}
+                style={{ cursor: h.status !== "abandoned" ? "pointer" : "default" }}
+                onClick={() => h.status !== "abandoned" && openPastInterview(h.id)}
+              >
+                <h3 style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: 0 }}>
+                  <span>
+                    {h.job_description.slice(0, 70)}
+                    {h.job_description.length > 70 ? "…" : ""}
+                  </span>
+                  {h.status === "done" && (
+                    <span className="badge done">{h.report?.score ?? "?"}/100</span>
+                  )}
+                  {h.status === "failed" && <span className="badge failed">grading failed</span>}
+                  {h.status === "abandoned" && <span className="badge">stopped early</span>}
+                  {(h.status === "active" || h.status === "grading") && (
+                    <span className="badge pending">{h.status}</span>
+                  )}
+                </h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+                  <span className="meta">{new Date(h.created_at).toLocaleString()}</span>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={(e) => deletePastInterview(e, h.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
