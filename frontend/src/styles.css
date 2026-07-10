@@ -220,18 +220,9 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 .interview-shell-wide { max-width: 1520px; }
 .interview-setup-grid {
   display: grid;
-  grid-template-columns: minmax(380px, 620px) minmax(300px, 400px);
-  gap: 24px;
+  grid-template-columns: minmax(380px, 620px) 1fr;
+  gap: 40px;
   align-items: start;
-  max-width: 1100px;
-}
-.interview-history-panel {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-soft);
-  padding: 18px;
-  max-height: 640px;
-  overflow-y: auto;
 }
 .interview-history-panel h2 { margin: 0 0 14px; font-size: 16px; }
 .interview-split {
