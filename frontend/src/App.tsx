@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import Landing from "./pages/Landing";
@@ -9,9 +10,11 @@ import Preferences from "./features/preferences/Preferences";
 import Resumes from "./features/resumes/Resumes";
 import Tailor from "./features/ai/Tailor";
 import CoverLetter from "./features/ai/CoverLetter";
-import Interview from "./features/interview/Interview";
 import Settings from "./features/settings/Settings";
-import type { ReactNode } from "react";
+
+// Lazy: pulls in CodeMirror + language packages (~700KB) only when someone
+// actually opens the interview simulator, not on every page load.
+const Interview = lazy(() => import("./features/interview/Interview"));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -42,7 +45,14 @@ export default function App() {
             <Route path="resumes" element={<Resumes />} />
             <Route path="tailor" element={<Tailor />} />
             <Route path="cover-letter" element={<CoverLetter />} />
-            <Route path="interview" element={<Interview />} />
+            <Route
+              path="interview"
+              element={
+                <Suspense fallback={<div className="page-loader">Loading…</div>}>
+                  <Interview />
+                </Suspense>
+              }
+            />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

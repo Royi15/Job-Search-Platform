@@ -217,6 +217,14 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 
 /* ============ Interview simulator ============ */
 .interview-shell { max-width: 860px; display: flex; flex-direction: column; }
+.interview-shell-wide { max-width: 1520px; }
+.interview-split {
+  display: grid;
+  grid-template-columns: minmax(380px, 1fr) minmax(440px, 1.2fr);
+  gap: 16px;
+  align-items: stretch;
+}
+.interview-split .chat-card { height: min(70vh, 700px); }
 .chat-card {
   display: flex;
   flex-direction: column;
@@ -230,9 +238,15 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 .chat-log { flex: 1; min-height: 0; overflow-y: auto; padding: 16px; display: grid; gap: 10px; align-content: start; }
 .bubble { border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-size: 14px; white-space: pre-wrap; }
 .bubble .who { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
-.bubble.q { background: var(--panel); border-left: 3px solid var(--blue); margin-right: 40px; }
-.bubble .transition-note { color: var(--muted); font-style: italic; font-size: 13px; margin-bottom: 6px; }
+.bubble.q { background: var(--panel); border-left: 3px solid var(--blue); margin-right: 40px; margin-bottom: 8px; }
+.bubble.q:last-child { margin-bottom: 0; }
 .bubble.a { background: var(--panel-2); border-left: 3px solid var(--yellow); margin-left: 40px; margin-top: 8px; }
+.typing-bubble { display: flex; flex-direction: column; gap: 6px; min-height: 20px; }
+.typing-dots { display: inline-flex; gap: 4px; }
+.typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: typing-bounce 1.2s infinite ease-in-out; }
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
 .chat-input-bar {
   flex-shrink: 0;
   display: flex;
@@ -245,6 +259,34 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 .chat-input-bar textarea { flex: 1; resize: none; }
 .timer { display: inline-block; background: var(--panel-2); border-radius: 20px; padding: 3px 12px; font-weight: 700; font-size: 13px; }
 .timer.danger { color: var(--red); animation: pulse 1s infinite; }
+
+/* Code panel (stage 2) — matches the chat card's height, VS Code dark editor */
+.code-panel {
+  display: flex;
+  flex-direction: column;
+  height: min(70vh, 700px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #1e1e1e;
+  overflow: hidden;
+}
+.code-panel-header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.code-panel-header select { width: auto; padding: 4px 8px; font-size: 12px; text-transform: none; letter-spacing: normal; }
+.code-panel-editor { flex: 1; min-height: 0; overflow: hidden; }
+.code-panel-editor .cm-editor { height: 100%; }
+.code-panel-editor .cm-scroller { font-family: "Fira Code", Consolas, "SF Mono", monospace; }
 @keyframes pulse { 50% { opacity: 0.5; } }
 
 @media (max-width: 860px) {
