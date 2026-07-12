@@ -42,16 +42,17 @@ class WorkerSettings:
         grade_interview,
     ]
     cron_jobs = [
-        # Hourly on the hour, 09:00-18:00 server-local time (VM timezone is
+        # Hourly on the hour, 09:00-17:00 server-local time (VM timezone is
         # Asia/Jerusalem), Sunday-Thursday only — the Israeli work week; Fri/Sat
         # scrapes would mostly burn Bright Data credits on an empty market, and
         # the 24h search window means Sunday 09:00 catches weekend postings.
+        # Trimmed from 09:00-18:00 to cut Bright Data usage after cost review.
         # Python weekday numbering: Mon=0 ... Fri=4, Sat=5, Sun=6.
         # unique=True prevents overlap if a run is slow.
         cron(
             fetch_and_notify,
             weekday={6, 0, 1, 2, 3},
-            hour=set(range(9, 19)),
+            hour=set(range(9, 18)),
             minute={0},
             unique=True,
             timeout=600,
