@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # LLM (platform-owned key; users never see or supply it)
     llm_api_key: str = ""
-    llm_model: str = "gemini-3.1-flash-lite"
+    llm_model: str = "gemini-3.5-flash-lite"
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
 
     # Telegram bot

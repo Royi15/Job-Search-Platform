@@ -90,7 +90,7 @@ Upon completion, receive a detailed evaluation including communication skills, a
 | Database   | PostgreSQL 16                                       |
 | Queue      | Redis (local, on the same VM)                       |
 | Job source | Bright Data LinkedIn jobs API (Remotive dev fallback) |
-| AI         | Gemini (`gemini-3.1-flash-lite`) via REST           |
+| AI         | Gemini (`gemini-3.5-flash-lite`) via REST           |
 | Hosting    | Azure Standard_B1s Ubuntu VM (systemd + nginx)      |
 
 ## 📁 Repository layout
