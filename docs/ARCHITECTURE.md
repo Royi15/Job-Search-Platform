@@ -25,7 +25,7 @@ boards, Telegram delivery) is pushed through Redis to a separate worker process.
 │  Job boards (Remotive, │◀──────────│   └─ run_generation (tailor / cover letter)  │
 │  Adzuna, ...)          │   HTTPS   │            │                                 │
 └────────────────────────┘           │            ▼  HTTPS                          │
-                                     │   Gemini API (gemini-3.1-flash-lite)         │
+                                     │   Gemini API (gemini-3.5-flash-lite)         │
 ┌────────────────────────┐  channel  │                                              │
 │  Discord channel       │◀──────────│   (fetch_and_notify also broadcasts every    │
 │  (community jobs feed) │  webhook  │    new student job to Discord)               │
