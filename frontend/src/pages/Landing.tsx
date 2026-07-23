@@ -21,6 +21,11 @@ const FEATURES = [
     title: "Magic Cover Letter",
     text: "Targeted cover letters and LinkedIn messages generated from your resume and the exact job description.",
   },
+  {
+    icon: "🎤",
+    title: "AI Interview Simulator",
+    text: "Practice a real behavioral + timed technical interview built from your resume and the job description, then get a graded report on where you stand.",
+  },
 ];
 
 const STEPS = [
