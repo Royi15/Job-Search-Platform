@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class InterviewStartRequest(BaseModel):
     resume_id: int
     job_description: str = Field(min_length=50, max_length=20000)
+    language: Literal["en", "he"] = "en"
 
 
 class InterviewAnswerRequest(BaseModel):
@@ -19,6 +20,7 @@ class InterviewSessionOut(BaseModel):
     id: int
     job_description: str
     title: str | None
+    language: str
     stage: str
     status: str
     transcript: list[dict[str, Any]]

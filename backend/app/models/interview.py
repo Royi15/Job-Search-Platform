@@ -20,6 +20,7 @@ class InterviewSession(Base):
     )
     job_description: Mapped[str] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
+    language: Mapped[str] = mapped_column(Text, server_default=text("'en'"))
     stage: Mapped[str] = mapped_column(Text, server_default=text("'behavioral'"))
     status: Mapped[str] = mapped_column(Text, server_default=text("'active'"))
     transcript: Mapped[list[dict[str, Any]]] = mapped_column(

@@ -19,52 +19,101 @@ TECHNICAL_QUESTIONS = 3           # stage 2 length
 TECHNICAL_TIME_LIMIT_SECONDS = 900  # per stage-2 question (15 min — real-interview weight)
 OVERTIME_GRACE_SECONDS = 15       # network/clock-skew allowance
 
-FIRST_QUESTION = (
-    "Tell me about yourself — walk me through your background and what "
-    "brings you to this role."
-)
+LANGUAGES = ("en", "he")
+DEFAULT_LANGUAGE = "en"
+
+FIRST_QUESTION = {
+    "en": (
+        "Tell me about yourself — walk me through your background and what "
+        "brings you to this role."
+    ),
+    "he": "ספר לי קצת על עצמך — על הרקע שלך ומה מביא אותך לתפקיד הזה.",
+}
 
 # Short acknowledgment lines shown before the next question, so questions
 # don't just snap in instantly — no LLM call, picked without repeats within
 # a session for as long as the pool allows.
-REGULAR_TRANSITIONS = [
-    "Got it, thanks for sharing.",
-    "Nice, that's helpful context.",
-    "Good — thanks, let's keep going.",
-    "Appreciate the detail there.",
-    "Interesting, thanks for that.",
-    "Okay, noted. Moving on.",
-    "Thanks, that gives me a good picture.",
-    "Solid answer — let's continue.",
-    "Great, thanks for explaining that.",
-    "Cool, let's move to the next one.",
-]
+REGULAR_TRANSITIONS = {
+    "en": [
+        "Got it, thanks for sharing.",
+        "Nice, that's helpful context.",
+        "Good — thanks, let's keep going.",
+        "Appreciate the detail there.",
+        "Interesting, thanks for that.",
+        "Okay, noted. Moving on.",
+        "Thanks, that gives me a good picture.",
+        "Solid answer — let's continue.",
+        "Great, thanks for explaining that.",
+        "Cool, let's move to the next one.",
+    ],
+    "he": [
+        "מעולה, תודה על השיתוף.",
+        "יופי, זה עוזר לי להבין יותר טוב.",
+        "טוב, תודה, בואו נמשיך.",
+        "תודה על הפירוט.",
+        "מעניין, תודה.",
+        "בסדר, רשמתי לעצמי. ממשיכים.",
+        "תודה, זה נותן לי תמונה טובה.",
+        "תשובה טובה, בואו נמשיך.",
+        "מעולה, תודה על ההסבר.",
+        "יופי, נעבור לשאלה הבאה.",
+    ],
+}
 
-STAGE_TRANSITIONS = [
-    "That wraps up the intro questions — nice work. Let's shift into the "
-    "technical round. Each question below is timed, so take a breath first.",
-    "Thanks, that's a great foundation. Now for the technical part — this "
-    "section is timed, so read carefully before you start typing.",
-    "Good, that covers the background. Time for the technical questions — "
-    "you'll have a timer on each one, so pace yourself.",
-]
+STAGE_TRANSITIONS = {
+    "en": [
+        "That wraps up the intro questions — nice work. Let's shift into the "
+        "technical round. Each question below is timed, so take a breath first.",
+        "Thanks, that's a great foundation. Now for the technical part — this "
+        "section is timed, so read carefully before you start typing.",
+        "Good, that covers the background. Time for the technical questions — "
+        "you'll have a timer on each one, so pace yourself.",
+    ],
+    "he": [
+        "בזה סיימנו את שאלות ההיכרות — כל הכבוד. עוברים לחלק הטכני. כל שאלה "
+        "בחלק הזה מתוזמנת, אז קחו רגע לפני שמתחילים.",
+        "תודה, זה בסיס טוב. עכשיו לחלק הטכני — הקטע הזה מתוזמן, אז כדאי "
+        "לקרוא היטב לפני שכותבים.",
+        "טוב, זה מכסה את הרקע. עכשיו לשאלות הטכניות — יהיה טיימר על כל אחת, "
+        "אז כדאי לשמור על קצב.",
+    ],
+}
 
 
-def _pick_transition(pool: list[str], transcript: list[dict[str, Any]]) -> str:
+def _pick_transition(pool: dict[str, list[str]], language: str, transcript: list[dict[str, Any]]) -> str:
     """Avoid repeating a transition line within the same session."""
+    options = pool.get(language, pool[DEFAULT_LANGUAGE])
     used = {e.get("transition") for e in transcript if e.get("transition")}
-    remaining = [t for t in pool if t not in used]
-    return random.choice(remaining or pool)
+    remaining = [t for t in options if t not in used]
+    return random.choice(remaining or options)
 
 
-def pick_regular_transition(transcript: list[dict[str, Any]]) -> str:
-    return _pick_transition(REGULAR_TRANSITIONS, transcript)
+def pick_regular_transition(transcript: list[dict[str, Any]], language: str = DEFAULT_LANGUAGE) -> str:
+    return _pick_transition(REGULAR_TRANSITIONS, language, transcript)
 
 
-def pick_stage_transition(transcript: list[dict[str, Any]]) -> str:
-    return _pick_transition(STAGE_TRANSITIONS, transcript)
+def pick_stage_transition(transcript: list[dict[str, Any]], language: str = DEFAULT_LANGUAGE) -> str:
+    return _pick_transition(STAGE_TRANSITIONS, language, transcript)
 
-INTERVIEWER_SYSTEM = """\
+
+LANGUAGE_NAMES = {"en": "English", "he": "Hebrew"}
+
+
+def _language_instruction(language: str) -> str:
+    if language == "he":
+        return (
+            "\n\nConduct this interview in Hebrew: write all questions, "
+            "acknowledgments, and feedback in Hebrew. Keep technical terms, "
+            "product/company names, and code exactly as they'd naturally "
+            "appear in a real Israeli tech interview — in English (e.g. "
+            "\"API\", \"state\", \"O(log n)\") — don't force-translate them "
+            "into Hebrew equivalents that no engineer actually uses."
+        )
+    return ""
+
+
+def interviewer_system(language: str = DEFAULT_LANGUAGE) -> str:
+    return f"""\
 You are a professional but friendly interviewer at the company hiring for the
 job below. You interview students and junior candidates: rigorous, never
 condescending. You output ONLY what you are asked to output — no preambles,
@@ -73,7 +122,12 @@ no meta commentary.
 Write in plain text only — this is displayed verbatim in a chat bubble, not
 rendered as markdown or LaTeX. Never use $...$ or \\(...\\) math notation,
 markdown bold/italics/headers, or bullet-point syntax. Write "O(1)" and
-"n^2", not "$O(1)$" or "$n^2$". Plain sentences and plain punctuation only."""
+"n^2", not "$O(1)$" or "$n^2$". Plain sentences and plain punctuation only.\
+{_language_instruction(language)}"""
+
+
+# Kept for any external reference to the plain English system prompt.
+INTERVIEWER_SYSTEM = interviewer_system()
 
 
 def new_entry(
@@ -121,6 +175,7 @@ async def next_behavioral_question(
     job_description: str,
     transcript: list[dict[str, Any]],
     excluded_questions: list[str] | None = None,
+    language: str = DEFAULT_LANGUAGE,
 ) -> str:
     prompt = f"""\
 You are in stage 1 of the interview (behavioral / getting to know the
@@ -144,7 +199,7 @@ CANDIDATE RESUME:
 ---
 
 Output: the question text only, one or two sentences."""
-    question = await llm.generate(prompt, system=INTERVIEWER_SYSTEM, temperature=0.8)
+    question = await llm.generate(prompt, system=interviewer_system(language), temperature=0.8)
     return question.strip().strip('"')
 
 
@@ -153,6 +208,7 @@ async def next_technical_question(
     job_description: str,
     transcript: list[dict[str, Any]],
     excluded_questions: list[str] | None = None,
+    language: str = DEFAULT_LANGUAGE,
 ) -> str:
     prompt = f"""\
 You are in stage 2 of the interview (technical, timed) — this should feel
@@ -186,7 +242,7 @@ CANDIDATE RESUME (for calibration):
 ---
 
 Output: the question text only."""
-    question = await llm.generate(prompt, system=INTERVIEWER_SYSTEM, temperature=0.8)
+    question = await llm.generate(prompt, system=interviewer_system(language), temperature=0.8)
     return question.strip().strip('"')
 
 
@@ -279,19 +335,27 @@ def _clamp(value: Any, default: float = 5.0) -> float:
 
 
 async def grade_transcript(
-    resume_text: str, job_description: str, transcript: list[dict[str, Any]]
+    resume_text: str,
+    job_description: str,
+    transcript: list[dict[str, Any]],
+    language: str = DEFAULT_LANGUAGE,
 ) -> dict[str, Any]:
     """Run the rubric evaluation, then compute the 0-100 score in code:
     behavioral dimensions -> 40 points, technical questions -> 60 points,
     with a -2 penalty on any technical question that ran overtime."""
+    prompt = GRADING_PROMPT.format(
+        job_description=job_description[:6000],
+        resume=resume_text[:10000],
+        transcript=_format_transcript(transcript),
+    )
+    if language == "he":
+        prompt += (
+            "\n\nWrite all feedback text (comments, summary, strengths, "
+            "improvements, review, better_answer_hint) in Hebrew — keep "
+            "technical terms and code in English as they naturally appear."
+        )
     analysis = await llm.generate_json(
-        GRADING_PROMPT.format(
-            job_description=job_description[:6000],
-            resume=resume_text[:10000],
-            transcript=_format_transcript(transcript),
-        ),
-        system=INTERVIEWER_SYSTEM,
-        temperature=0.2,
+        prompt, system=interviewer_system(language), temperature=0.2
     )
 
     behavioral = analysis.get("behavioral", {})
