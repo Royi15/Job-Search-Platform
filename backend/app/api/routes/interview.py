@@ -94,7 +94,13 @@ async def start_interview(body: InterviewStartRequest, user: CurrentUser, db: DB
         resume_id=resume.id,
         job_description=body.job_description,
         title=title,
-        transcript=[engine.new_entry("behavioral", engine.FIRST_QUESTION)],
+        language=body.language,
+        transcript=[
+            engine.new_entry(
+                "behavioral",
+                engine.FIRST_QUESTION.get(body.language, engine.FIRST_QUESTION[engine.DEFAULT_LANGUAGE]),
+            )
+        ],
     )
     db.add(session)
     await db.commit()
@@ -185,16 +191,16 @@ async def answer_question(
     if session.stage == "behavioral":
         if behavioral_done < engine.BEHAVIORAL_QUESTIONS:
             question = await engine.next_behavioral_question(
-                resume_text, session.job_description, transcript, excluded
+                resume_text, session.job_description, transcript, excluded, session.language
             )
-            transition = engine.pick_regular_transition(transcript)
+            transition = engine.pick_regular_transition(transcript, session.language)
             transcript.append(engine.new_entry("behavioral", question, transition=transition))
         else:
             session.stage = "technical"
             question = await engine.next_technical_question(
-                resume_text, session.job_description, transcript, excluded
+                resume_text, session.job_description, transcript, excluded, session.language
             )
-            transition = engine.pick_stage_transition(transcript)
+            transition = engine.pick_stage_transition(transcript, session.language)
             transcript.append(
                 engine.new_entry(
                     "technical",
@@ -206,9 +212,9 @@ async def answer_question(
     elif session.stage == "technical":
         if technical_done < engine.TECHNICAL_QUESTIONS:
             question = await engine.next_technical_question(
-                resume_text, session.job_description, transcript, excluded
+                resume_text, session.job_description, transcript, excluded, session.language
             )
-            transition = engine.pick_regular_transition(transcript)
+            transition = engine.pick_regular_transition(transcript, session.language)
             transcript.append(
                 engine.new_entry(
                     "technical",

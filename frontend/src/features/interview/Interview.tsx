@@ -19,6 +19,96 @@ const STAGE_LABELS: Record<string, string> = {
 
 const QUESTION_REVEAL_DELAY_MS = 1000;
 
+const IS_HEBREW = (ch: string) => /[֐-׿]/.test(ch);
+const IS_LATIN = (ch: string) => /[A-Za-z0-9]/.test(ch);
+const BRACKET_PAIRS: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+
+// Hebrew text that hyphen- or bracket-attaches an English phrase with no
+// space (e.g. "ה-Time complexity" or "ה(complexity)") breaks the browser's
+// bidi reordering if we isolate whole whitespace-delimited tokens — the
+// Hebrew letter gets dragged into the English run's LTR isolate along with
+// it, which visually swaps their order and mirrors brackets the wrong way.
+// Instead, classify every character as Hebrew/Latin/neutral and group into
+// runs, wrapping only the Latin runs in <bdi dir="ltr">. Hebrew never
+// enters an LTR isolate.
+function bidiSafe(text: string): (string | JSX.Element)[] {
+  const chars = Array.from(text);
+  const strong = chars.map((ch) => (IS_HEBREW(ch) ? "he" : IS_LATIN(ch) ? "la" : null));
+
+  const nearestStrong = (from: number, step: 1 | -1): "he" | "la" | null => {
+    for (let i = from; i >= 0 && i < chars.length; i += step) {
+      if (strong[i]) return strong[i] as "he" | "la";
+    }
+    return null;
+  };
+
+  // A "(" and its matching ")" must resolve to the SAME script, or they stop
+  // being a matched pair — e.g. a parenthetical mixing Hebrew and English
+  // ("(תגובות מ-Chunk)") would otherwise attach the opening bracket to the
+  // Hebrew word right after it and the closing bracket to the English word
+  // right before it, landing them in different runs so they no longer
+  // visually pair up. Match brackets with a stack, then assign both ends the
+  // script of the first strong character actually inside the pair.
+  const pairOf = new Array<number | null>(chars.length).fill(null);
+  const openStack: number[] = [];
+  chars.forEach((ch, i) => {
+    if (BRACKET_PAIRS[ch]) openStack.push(i);
+    else if (Object.values(BRACKET_PAIRS).includes(ch) && openStack.length) {
+      const openIdx = openStack.pop()!;
+      pairOf[openIdx] = i;
+      pairOf[i] = openIdx;
+    }
+  });
+
+  const effective: ("he" | "la")[] = new Array(chars.length);
+  chars.forEach((ch, i) => {
+    if (strong[i]) effective[i] = strong[i] as "he" | "la";
+    else if (BRACKET_PAIRS[ch] && pairOf[i] !== null) {
+      const closeIdx = pairOf[i]!;
+      let inner: "he" | "la" | null = null;
+      for (let k = i + 1; k < closeIdx; k++) if (strong[k]) { inner = strong[k] as "he" | "la"; break; }
+      effective[i] = inner ?? nearestStrong(i - 1, -1) ?? nearestStrong(closeIdx + 1, 1) ?? "he";
+    }
+  });
+  // Closing brackets take whatever script their (already-resolved) opener got.
+  chars.forEach((ch, i) => {
+    if (pairOf[i] !== null && effective[i] === undefined) effective[i] = effective[pairOf[i]!];
+  });
+  // Everything else (plain punctuation, unmatched brackets, spaces).
+  chars.forEach((_ch, i) => {
+    if (effective[i] === undefined) effective[i] = nearestStrong(i - 1, -1) ?? nearestStrong(i + 1, 1) ?? "he";
+  });
+
+  // A space OR trailing punctuation (. , ? ! ; :) that bridges two DIFFERENT
+  // scripts must stand alone rather than merge into either neighboring run:
+  // merging it into an LTR run pushes it to that run's own trailing edge,
+  // but since the run's box is placed as one unit inside the outer RTL
+  // flow, that edge faces away from the Hebrew word it's supposed to lead
+  // into — so a trailing "," on an English word ends up on the wrong side,
+  // same as the space bug. A boundary character between two words of the
+  // SAME script (e.g. "Node.js") still merges normally.
+  const isSpace = (ch: string) => /\s/.test(ch);
+  const BOUNDARY_PUNCT = new Set([".", ",", "?", "!", ";", ":"]);
+  const runs: { latin: boolean | null; text: string }[] = [];
+  chars.forEach((ch, i) => {
+    if (isSpace(ch) || BOUNDARY_PUNCT.has(ch)) {
+      const prevLatin = runs.length ? runs[runs.length - 1].latin : null;
+      const nextStrong = nearestStrong(i + 1, 1);
+      const nextLatin = nextStrong === null ? null : nextStrong === "la";
+      if (prevLatin !== null && nextLatin !== null && prevLatin !== nextLatin) {
+        runs.push({ latin: null, text: ch });
+        return;
+      }
+    }
+    const latin = effective[i] === "la";
+    const last = runs[runs.length - 1];
+    if (last && last.latin === latin) last.text += ch;
+    else runs.push({ latin, text: ch });
+  });
+
+  return runs.map((r, i) => (r.latin ? <bdi key={i} dir="ltr">{r.text}</bdi> : <span key={i}>{r.text}</span>));
+}
+
 type CodeLang = "python" | "javascript" | "java" | "cpp" | "text";
 
 const LANG_OPTIONS: { value: CodeLang; label: string }[] = [
@@ -79,6 +169,7 @@ export default function Interview() {
   const [view, setView] = useState<"loading" | "setup" | "live">("loading");
   const [resumeId, setResumeId] = useState("");
   const [jd, setJd] = useState("");
+  const [language, setLanguage] = useState<"en" | "he">("en");
   const [answer, setAnswer] = useState("");
   const [code, setCode] = useState("");
   const [codeLang, setCodeLang] = useState<CodeLang>("python");
@@ -170,6 +261,7 @@ export default function Interview() {
       const { data } = await api.post<InterviewSession>("/interviews", {
         resume_id: Number(resumeId),
         job_description: jd,
+        language,
       });
       setSession(data);
       setView("live");
@@ -252,6 +344,13 @@ export default function Interview() {
         ) : (
           <form className="form-grid" onSubmit={start}>
             <div>
+              <label>Interview language</label>
+              <select value={language} onChange={(e) => setLanguage(e.target.value as "en" | "he")}>
+                <option value="en">English</option>
+                <option value="he">עברית (Hebrew)</option>
+              </select>
+            </div>
+            <div>
               <label>Resume</label>
               <select required value={resumeId} onChange={(e) => setResumeId(e.target.value)}>
                 <option value="">Choose…</option>
@@ -297,10 +396,13 @@ export default function Interview() {
                 onClick={() => h.status !== "abandoned" && openPastInterview(h.id)}
               >
                 <h3 style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, margin: 0 }}>
-                  <span>
-                    {h.title ??
-                      h.job_description.slice(0, 70) +
-                        (h.job_description.length > 70 ? "…" : "")}
+                  <span dir="auto">
+                    {h.language === "he" && <span dir="ltr">🇮🇱 </span>}
+                    {bidiSafe(
+                      h.title ??
+                        h.job_description.slice(0, 70) +
+                          (h.job_description.length > 70 ? "…" : "")
+                    )}
                   </span>
                   {h.status === "done" && (
                     <span className="badge done">{h.report?.score ?? "?"}/100</span>
@@ -351,10 +453,10 @@ export default function Interview() {
 
             <div className="panel">
               <h3>Interviewer's summary</h3>
-              <p style={{ margin: 0 }}>{report.summary}</p>
+              <p style={{ margin: 0 }} dir="auto">{report.summary && bidiSafe(report.summary)}</p>
               {report.behavioral?.comments && (
-                <p className="meta" style={{ marginTop: 10 }}>
-                  Stage 1: {report.behavioral.comments} (communication{" "}
+                <p className="meta" style={{ marginTop: 10 }} dir="auto">
+                  <span dir="ltr">Stage 1:</span> {bidiSafe(report.behavioral.comments)} (communication{" "}
                   {report.behavioral.communication}/10 · structure{" "}
                   {report.behavioral.structure}/10 · relevance{" "}
                   {report.behavioral.relevance}/10)
@@ -368,15 +470,15 @@ export default function Interview() {
                 const entry = technicalEntries[review.question_index - 1];
                 return (
                   <div className="panel rewrite" key={review.question_index}>
-                    <div className="meta">Q{review.question_index}: {entry?.question}</div>
+                    <div className="meta" dir="auto"><span dir="ltr">Q{review.question_index}:</span> {entry && bidiSafe(entry.question)}</div>
                     <div style={{ margin: "8px 0 4px", fontWeight: 700 }}>
                       {review.score}/10{" "}
                       {entry?.overtime && <span className="chip red">⏱️ overtime −2</span>}
                     </div>
-                    <p style={{ margin: 0 }}>{review.review}</p>
+                    <p style={{ margin: 0 }} dir="auto">{bidiSafe(review.review)}</p>
                     {review.better_answer_hint && (
-                      <p className="meta" style={{ marginTop: 8 }}>
-                        💡 {review.better_answer_hint}
+                      <p className="meta" style={{ marginTop: 8 }} dir="auto">
+                        💡 {bidiSafe(review.better_answer_hint)}
                       </p>
                     )}
                   </div>
@@ -388,13 +490,13 @@ export default function Interview() {
               <div className="panel">
                 <h3>Strengths</h3>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {(report.strengths ?? []).map((s, i) => <li key={i}>{s}</li>)}
+                  {(report.strengths ?? []).map((s, i) => <li key={i} dir="auto">{bidiSafe(s)}</li>)}
                 </ul>
               </div>
               <div className="panel">
                 <h3>Work on this</h3>
                 <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {(report.improvements ?? []).map((s, i) => <li key={i}>{s}</li>)}
+                  {(report.improvements ?? []).map((s, i) => <li key={i} dir="auto">{bidiSafe(s)}</li>)}
                 </ul>
               </div>
             </div>
@@ -437,20 +539,20 @@ export default function Interview() {
           return (
             <div key={i}>
               {entry.transition && (
-                <div className="bubble q">
-                  <span className="who">Interviewer</span>
-                  {entry.transition}
+                <div className="bubble q" dir="auto">
+                  <span className="who" dir="ltr">Interviewer</span>
+                  {bidiSafe(entry.transition)}
                 </div>
               )}
               {isLatest && !showQuestion ? (
                 <div className="bubble q typing-bubble">
-                  <span className="who">Interviewer</span>
+                  <span className="who" dir="ltr">Interviewer</span>
                   <span className="typing-dots"><span /><span /><span /></span>
                 </div>
               ) : (
-                <div className="bubble q">
-                  <span className="who">Interviewer</span>
-                  {entry.question}
+                <div className="bubble q" dir="auto">
+                  <span className="who" dir="ltr">Interviewer</span>
+                  {bidiSafe(entry.question)}
                   {isLatest && entry.time_limit_seconds && (
                     <div style={{ marginTop: 8 }}>
                       <Timer
@@ -471,9 +573,9 @@ export default function Interview() {
                 </div>
               )}
               {entry.answer !== null && (
-                <div className="bubble a">
-                  <span className="who">You</span>
-                  {entry.answer}
+                <div className="bubble a" dir="auto">
+                  <span className="who" dir="ltr">You</span>
+                  {bidiSafe(entry.answer)}
                 </div>
               )}
             </div>
@@ -490,6 +592,7 @@ export default function Interview() {
       >
         <textarea
           rows={3}
+          dir="auto"
           placeholder={
             isTechnicalStage
               ? "Explain your approach… (use the code editor on the right for actual code)"
@@ -523,7 +626,7 @@ export default function Interview() {
       {isTechnicalStage ? (
         <div className="interview-split" style={{ marginTop: 20 }}>
           {chatPane}
-          <div className="code-panel">
+          <div className="code-panel" dir="ltr">
             <div className="code-panel-header">
               <span>Code (optional)</span>
               <select

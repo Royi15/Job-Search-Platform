@@ -228,7 +228,7 @@ async def grade_interview(ctx: dict, session_id: int) -> str:
 
         try:
             session.report = await interview_engine.grade_transcript(
-                resume_text, session.job_description, session.transcript
+                resume_text, session.job_description, session.transcript, session.language
             )
             session.status = "done"
             session.stage = "done"
