@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { SECTIONS, type Hub } from "../config/sections";
 
@@ -10,9 +10,12 @@ export default function AppLayout({ hub }: { hub: Hub }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
+        <Link to="/app" className="brand" style={{ textDecoration: "none", color: "inherit" }}>
           Job<span style={{ color: "var(--yellow)" }}>Pilot</span>
-        </div>
+        </Link>
+        <Link to="/app" className="sidebar-back">
+          ← Back
+        </Link>
         {items.map((item) => (
           <NavLink
             key={item.path}

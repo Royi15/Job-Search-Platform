@@ -35,6 +35,21 @@ input, textarea, select {
   width: 100%;
 }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); border-color: transparent; }
+input[type="file"] { padding: 8px; color: var(--muted); font-size: 13px; }
+input[type="file"]::file-selector-button {
+  background: var(--yellow);
+  color: #1a1a06;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  margin-inline-end: 12px;
+  transition: filter 0.15s;
+}
+input[type="file"]::file-selector-button:hover { filter: brightness(1.12); }
+input[type="file"]:disabled::file-selector-button { opacity: 0.5; cursor: not-allowed; }
 label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
 
 /* ============ Buttons ============ */
@@ -132,10 +147,11 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 /* ============ App shell ============ */
 .app-shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
 .sidebar { background: var(--bg-soft); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
-.sidebar .brand { padding: 0 10px 16px; }
+.sidebar .brand { padding: 0 10px 16px; font-size: 20px; font-weight: 800; }
 .sidebar a { padding: 9px 12px; border-radius: 8px; color: var(--muted); font-size: 14px; }
 .sidebar a:hover { color: var(--text); background: var(--panel); }
 .sidebar a.active { color: var(--text); background: var(--panel-2); font-weight: 600; }
+.sidebar a.sidebar-back { margin-bottom: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); border-radius: 0; }
 .sidebar .spacer { flex: 1; }
 .sidebar .user { font-size: 12px; color: var(--muted); padding: 0 10px 8px; overflow: hidden; text-overflow: ellipsis; }
 .main { padding: 28px 32px; overflow-x: auto; }
@@ -145,7 +161,11 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 
 /* ============ Welcome / search ============ */
 .welcome-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+.welcome-hero { text-align: center; max-width: 640px; margin: 48px auto 0; }
+.welcome-hero .welcome-title { font-size: 50px; margin: 0 0 24px; }
 .search-wrap { position: relative; max-width: 420px; margin: 18px 0 36px; }
+.search-wrap-lg { max-width: 100%; margin: 0 auto; }
+.search-wrap-lg input { font-size: 17px; padding: 16px 20px; }
 .search-results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10; padding: 6px; display: grid; gap: 2px; max-height: 320px; overflow-y: auto; }
 .search-result-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: none; color: var(--text); font: inherit; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
 .search-result-item:hover { background: var(--panel-2); }

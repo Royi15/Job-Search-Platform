@@ -5,7 +5,6 @@ import Landing from "./pages/Landing";
 import AuthPage from "./pages/AuthPage";
 import AppLayout from "./pages/AppLayout";
 import Welcome from "./pages/Welcome";
-import StudyHome from "./pages/StudyHome";
 import Board from "./features/board/Board";
 import AlertsFeed from "./features/alerts/AlertsFeed";
 import Preferences from "./features/preferences/Preferences";
@@ -66,9 +65,8 @@ export default function App() {
             </Route>
 
             <Route path="study" element={<AppLayout hub="study" />}>
-              <Route index element={<StudyHome />} />
               <Route
-                path="notebooks"
+                index
                 element={
                   <Suspense fallback={<div className="page-loader">Loading…</div>}>
                     <Notebooks />

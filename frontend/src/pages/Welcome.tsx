@@ -36,28 +36,30 @@ export default function Welcome() {
         </button>
       </header>
       <main className="main">
-        <h1>Welcome, {user?.full_name ?? user?.email}</h1>
-        <div className="search-wrap">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Jump to a section… (e.g. “resumes”)"
-            autoComplete="off"
-          />
-          {results.length > 0 && (
-            <div className="search-results panel">
-              {results.map((r) => (
-                <button
-                  key={r.path}
-                  type="button"
-                  className="search-result-item"
-                  onClick={() => goTo(r.path)}
-                >
-                  <span>{r.icon}</span> {r.label}
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="welcome-hero">
+          <h1 className="welcome-title">Welcome, {user?.full_name ?? user?.email}</h1>
+          <div className="search-wrap search-wrap-lg">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Jump to a section… (e.g. “resumes”)"
+              autoComplete="off"
+            />
+            {results.length > 0 && (
+              <div className="search-results panel">
+                {results.map((r) => (
+                  <button
+                    key={r.path}
+                    type="button"
+                    className="search-result-item"
+                    onClick={() => goTo(r.path)}
+                  >
+                    <span>{r.icon}</span> {r.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="feature-cards" style={{ marginTop: 32 }}>
           <Link to="/app/job" className="feature-card">

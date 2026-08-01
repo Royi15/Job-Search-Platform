@@ -17,6 +17,6 @@ export const SECTIONS: Section[] = [
   { icon: "✨", label: "Cover Letter", path: "/app/job/cover-letter", hub: "job" },
   { icon: "🎤", label: "Interview Sim", path: "/app/job/interview", hub: "job" },
   { icon: "⚙️", label: "Settings", path: "/app/job/settings", hub: "job" },
-  { icon: "📓", label: "Notebook Generator", path: "/app/study/notebooks", hub: "study" },
+  { icon: "📓", label: "Notebook Generator", path: "/app/study", hub: "study", end: true },
   { icon: "📝", label: "Trivisum", path: "/app/study/trivisum", hub: "study" },
 ];
