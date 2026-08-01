@@ -35,12 +35,18 @@ function renderKatex(latex: string, displayMode: boolean): string {
  * contains a block formula, every surrounding text segment gets its
  * alignment set directly instead of counting on inheritance. */
 export default function MathText({ text, dir = "ltr" }: { text: string; dir?: "rtl" | "ltr" }) {
+  // Notebook/quiz content comes straight from LLM JSON with no schema
+  // validation on the backend — a block can genuinely have a missing or
+  // non-string field. Coercing here (rather than trusting the TS type)
+  // keeps a single malformed field from throwing mid-render and blanking
+  // the whole page (there's no try/catch around React render).
+  const safeText = typeof text === "string" ? text : String(text ?? "");
   const nodes: (string | { html: string; display: boolean })[] = [];
   let lastIndex = 0;
 
-  for (const match of text.matchAll(MATH_TOKEN)) {
+  for (const match of safeText.matchAll(MATH_TOKEN)) {
     const index = match.index ?? 0;
-    if (index > lastIndex) nodes.push(text.slice(lastIndex, index));
+    if (index > lastIndex) nodes.push(safeText.slice(lastIndex, index));
     if (match[1] !== undefined) {
       nodes.push({ html: renderKatex(match[1], true), display: true });
     } else if (match[2] !== undefined) {
@@ -48,7 +54,7 @@ export default function MathText({ text, dir = "ltr" }: { text: string; dir?: "r
     }
     lastIndex = index + match[0].length;
   }
-  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  if (lastIndex < safeText.length) nodes.push(safeText.slice(lastIndex));
 
   const hasBlockMath = nodes.some((n) => typeof n !== "string" && n.display);
   const textAlign = dir === "rtl" ? "right" : "left";

@@ -254,7 +254,7 @@ export default function Trivisum() {
       }
 
       return (
-        <div style={{ maxWidth: 480 }}>
+        <div style={{ maxWidth: 480, margin: "0 auto" }}>
           <button
             className="btn btn-ghost btn-sm no-print"
             style={{ marginBottom: 16 }}
@@ -319,7 +319,7 @@ export default function Trivisum() {
     }
 
     return (
-      <div style={{ maxWidth: 680 }}>
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
         <div className="no-print" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setSelectedId(null)}>
             ← Back to quizzes

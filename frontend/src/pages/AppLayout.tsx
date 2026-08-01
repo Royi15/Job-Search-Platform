@@ -1,10 +1,12 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { SECTIONS, type Hub } from "../config/sections";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 export default function AppLayout({ hub }: { hub: Hub }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const items = SECTIONS.filter((s) => s.hub === hub);
 
   return (
@@ -39,7 +41,17 @@ export default function AppLayout({ hub }: { hub: Hub }) {
         </button>
       </aside>
       <main className="main">
-        <Outlet />
+        <ErrorBoundary
+          key={location.pathname}
+          fallback={
+            <div className="empty">
+              Something went wrong displaying this page. Try navigating to another page from
+              the sidebar, or refresh.
+            </div>
+          }
+        >
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

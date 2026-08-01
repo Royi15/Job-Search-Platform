@@ -3,6 +3,7 @@ import api from "../../api/client";
 import type { Notebook, NotebookBlock, NotebookPageContent } from "../../api/types";
 import MathText from "./MathText";
 import Diagram from "./Diagram";
+import ErrorBoundary from "../../components/ErrorBoundary";
 
 type DisplayPage =
   | { kind: "page"; page: NotebookPageContent }
@@ -153,7 +154,7 @@ export default function Notebooks() {
         case "bullets":
           return (
             <ul className="notebook-bullets" key={i}>
-              {block.items.map((b, j) => (
+              {(block.items ?? []).map((b, j) => (
                 <li key={j} dir={contentDir} style={{ textAlign }}>
                   <MathText text={b} dir={mathDir} />
                 </li>
@@ -166,7 +167,7 @@ export default function Notebooks() {
               <table className="notebook-table">
                 <thead>
                   <tr>
-                    {block.headers.map((h, j) => (
+                    {(block.headers ?? []).map((h, j) => (
                       <th key={j} dir={contentDir} style={{ textAlign }}>
                         <MathText text={h} dir={mathDir} />
                       </th>
@@ -174,9 +175,9 @@ export default function Notebooks() {
                   </tr>
                 </thead>
                 <tbody>
-                  {block.rows.map((row, j) => (
+                  {(block.rows ?? []).map((row, j) => (
                     <tr key={j}>
-                      {row.map((cell, k) => (
+                      {(row ?? []).map((cell, k) => (
                         <td key={k} dir={contentDir} style={{ textAlign }}>
                           <MathText text={cell} dir={mathDir} />
                         </td>
@@ -194,7 +195,9 @@ export default function Notebooks() {
             </div>
           );
         case "diagram":
-          return <Diagram code={block.content} key={i} />;
+          return <Diagram code={block.content ?? ""} key={i} />;
+        default:
+          return null;
       }
     }
 
@@ -233,7 +236,7 @@ export default function Notebooks() {
     }
 
     return (
-      <div style={{ maxWidth: 860 }}>
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <div className="no-print" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setSelectedId(null)}>
             ← Back to notebooks
@@ -268,16 +271,26 @@ export default function Notebooks() {
           {printMode ? (
             <div className="stack">
               {pages.map((page, i) => (
-                <div key={i}>{renderPage(page)}</div>
+                <ErrorBoundary key={i} fallback={<div className="empty">This page couldn't be displayed.</div>}>
+                  <div>{renderPage(page)}</div>
+                </ErrorBoundary>
               ))}
             </div>
           ) : (
-            <div
+            <ErrorBoundary
               key={clampedIndex}
-              className={`notebook-page-anim ${pageDirection === "next" ? "notebook-page-next" : "notebook-page-prev"}`}
+              fallback={
+                <div className="empty">
+                  This page couldn't be displayed — try Prev/Next to move to another page.
+                </div>
+              }
             >
-              {pages[clampedIndex] && renderPage(pages[clampedIndex])}
-            </div>
+              <div
+                className={`notebook-page-anim ${pageDirection === "next" ? "notebook-page-next" : "notebook-page-prev"}`}
+              >
+                {pages[clampedIndex] && renderPage(pages[clampedIndex])}
+              </div>
+            </ErrorBoundary>
           )}
         </div>
 
