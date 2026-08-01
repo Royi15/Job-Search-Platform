@@ -6,6 +6,7 @@ from app.models.application import Application, ApplicationEvent, ApplicationSta
 from app.models.resume import Resume
 from app.models.generation import AIGeneration, GenerationKind
 from app.models.interview import InterviewSession
+from app.models.notebook import Notebook
 
 __all__ = [
     "InterviewSession",
@@ -19,4 +20,5 @@ __all__ = [
     "Resume",
     "AIGeneration",
     "GenerationKind",
+    "Notebook",
 ]

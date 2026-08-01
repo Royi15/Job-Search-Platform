@@ -6,6 +6,7 @@ worker in settings.py) and reuses the same services/ code the API uses.
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -17,18 +18,21 @@ from app.models import (
     InterviewSession,
     Job,
     JobAlert,
+    Notebook,
     Resume,
     SearchPreference,
     User,
 )
 from app.services import cover_letter, discord, tailoring
 from app.services import interview as interview_engine
+from app.services import notebook as notebook_engine
 from app.services import telegram as tg
 from app.services.ats_parser import (
     extract_pdf_text,
     extract_skills_llm,
     parse_resume_text,
 )
+from app.services.document_extract import extract_pptx_text
 from app.services.job_sources import FetchedJob, get_active_sources
 from app.services.matching import job_matches_preference
 
@@ -295,3 +299,52 @@ async def fetch_and_notify(ctx: dict) -> str:
     summary = f"fetched={len(fetched)} new={len(new_jobs)}"
     logger.info("fetch_and_notify done: %s", summary)
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Notebook generation (enqueued by POST /notebooks)
+# ---------------------------------------------------------------------------
+async def generate_notebook(ctx: dict, notebook_id: int) -> str:
+    """Extract + summarize a source file into a structured notebook. The
+    source file is deleted afterward either way — it's single-use, unlike a
+    resume which gets re-read on every tailoring run."""
+    async with ctx["db_factory"]() as db:
+        nb = await db.get(Notebook, notebook_id)
+        if nb is None:
+            return "notebook missing"
+
+        nb.status = "running"
+        await db.commit()
+
+        try:
+            if nb.source_type == "pdf":
+                text = await asyncio.to_thread(extract_pdf_text, nb.storage_path)
+                content = await notebook_engine.generate_from_text(text, nb.language)
+            elif nb.source_type == "pptx":
+                text = await asyncio.to_thread(extract_pptx_text, nb.storage_path)
+                content = await notebook_engine.generate_from_text(text, nb.language)
+            elif nb.source_type == "mp3":
+                audio_bytes = await asyncio.to_thread(Path(nb.storage_path).read_bytes)
+                content = await notebook_engine.generate_from_audio(
+                    audio_bytes, "audio/mpeg", nb.language
+                )
+            else:
+                raise ValueError(f"Unsupported source_type: {nb.source_type}")
+
+            nb.content = content
+            nb.title = content.get("title") or nb.original_filename
+            nb.status = "done"
+        except Exception as exc:
+            logger.exception("Notebook generation %s failed", notebook_id)
+            nb.error = f"{type(exc).__name__}: {exc}"[:500].strip(": ")
+            nb.status = "failed"
+        finally:
+            # Delete the source regardless of outcome — no orphaned uploads
+            # piling up on the VM even if generation failed.
+            if nb.storage_path:
+                Path(nb.storage_path).unlink(missing_ok=True)
+                nb.storage_path = None
+
+        nb.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+        return f"notebook {notebook_id}: {nb.status}"

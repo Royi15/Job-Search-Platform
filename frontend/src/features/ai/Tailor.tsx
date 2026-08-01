@@ -30,7 +30,7 @@ export default function Tailor() {
 
       {resumes.length === 0 ? (
         <div className="empty">
-          First <Link to="/app/resumes" style={{ color: "var(--blue)" }}>upload a resume</Link> and
+          First <Link to="/app/job/resumes" style={{ color: "var(--blue)" }}>upload a resume</Link> and
           wait for parsing to finish.
         </div>
       ) : (

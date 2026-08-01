@@ -201,3 +201,27 @@ CREATE TABLE interview_sessions (
     completed_at    TIMESTAMPTZ
 );
 CREATE INDEX idx_interviews_user ON interview_sessions (user_id, created_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Notebooks (STUDY hub): upload a PDF/PPTX/MP3, the worker extracts and
+-- summarizes it into a structured study notebook. The source file is
+-- deleted once processed (success or failure) — only the generated JSONB
+-- content is kept permanently, unlike resumes which keep the source file.
+-- ---------------------------------------------------------------------------
+CREATE TABLE notebooks (
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id           BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    original_filename TEXT        NOT NULL,
+    source_type       TEXT        NOT NULL CHECK (source_type IN ('pdf', 'pptx', 'mp3')),
+    storage_path      TEXT,                                   -- cleared once processed
+    title             TEXT,                                   -- LLM-derived, shown in the list
+    language          TEXT        NOT NULL DEFAULT 'en'
+                      CHECK (language IN ('en', 'he')),
+    content           JSONB,                                  -- {title, subject, paper_style, summary, pages:[{heading, icon, blocks:[...]}], key_terms?}
+    status            TEXT        NOT NULL DEFAULT 'pending'
+                      CHECK (status IN ('pending', 'running', 'done', 'failed')),
+    error             TEXT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at      TIMESTAMPTZ
+);
+CREATE INDEX idx_notebooks_user ON notebooks (user_id, created_at DESC);

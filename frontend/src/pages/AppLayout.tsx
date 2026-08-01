@@ -1,20 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { SECTIONS, type Hub } from "../config/sections";
 
-const NAV = [
-  { to: "/app", label: "📋 Board", end: true },
-  { to: "/app/alerts", label: "🔔 Job Alerts" },
-  { to: "/app/preferences", label: "🎯 Preferences" },
-  { to: "/app/resumes", label: "📄 Resumes" },
-  { to: "/app/tailor", label: "🛡️ ATS Tailor" },
-  { to: "/app/cover-letter", label: "✨ Cover Letter" },
-  { to: "/app/interview", label: "🎤 Interview Sim" },
-  { to: "/app/settings", label: "⚙️ Settings" },
-];
-
-export default function AppLayout() {
+export default function AppLayout({ hub }: { hub: Hub }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const items = SECTIONS.filter((s) => s.hub === hub);
 
   return (
     <div className="app-shell">
@@ -22,14 +13,14 @@ export default function AppLayout() {
         <div className="brand">
           Job<span style={{ color: "var(--yellow)" }}>Pilot</span>
         </div>
-        {NAV.map((item) => (
+        {items.map((item) => (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={item.path}
+            to={item.path}
             end={item.end}
             className={({ isActive }) => (isActive ? "active" : "")}
           >
-            {item.label}
+            {item.icon} {item.label}
           </NavLink>
         ))}
         <div className="spacer" />

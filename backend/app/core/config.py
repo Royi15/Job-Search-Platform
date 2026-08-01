@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # LLM (platform-owned key; users never see or supply it)
     llm_api_key: str = ""
     llm_model: str = "gemini-3.5-flash-lite"
+    # Used for calls that attach inline audio — verify this model actually
+    # accepts audio input; override via env if the default doesn't.
+    llm_audio_model: str = "gemini-3.5-flash-lite"
     llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
 
     # Telegram bot
@@ -50,6 +53,12 @@ class Settings(BaseSettings):
     # Files / CORS
     upload_dir: str = "./uploads"
     max_upload_bytes: int = 8 * 1024 * 1024
+    # PDF/PPTX notebook sources go through Gemini inline, capped at Google's
+    # own inline-request ceiling (~20MB).
+    max_notebook_upload_bytes: int = 20 * 1024 * 1024
+    # MP3 sources go through the Files API (llm.upload_file) instead, which
+    # has a much higher ceiling — sized for real lecture-length recordings.
+    max_notebook_audio_bytes: int = 150 * 1024 * 1024
     cors_origins: list[str] = ["http://localhost:5173"]
 
 
