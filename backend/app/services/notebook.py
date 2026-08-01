@@ -197,6 +197,14 @@ Rules:
   single LaTeX command (\\alpha, \\sum, \\int, \\cdot, \\times, ...) needs
   its backslash doubled, with no exceptions — a single un-doubled backslash
   makes the entire JSON response invalid and the whole notebook fails.
+- CRITICAL — if any text needs an actual double-quote character for any
+  reason (quoting a term, or a Hebrew abbreviation written with a
+  gershayim mark, e.g. תנ"ך, רמב"ם), you MUST escape it as \\" inside the
+  JSON string. A bare, un-escaped " in the middle of a string ends that
+  string early and makes the entire JSON response fail to parse — there
+  is no recovery from this, unlike a missed backslash. When in doubt,
+  prefer spelling the word out without the abbreviation mark instead of
+  risking an unescaped quote.
 - "key_terms" is optional — include it only if the material has genuine
   jargon/terminology worth a quick-reference glossary; omit it (empty list)
   otherwise.

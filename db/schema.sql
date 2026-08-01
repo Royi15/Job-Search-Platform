@@ -225,3 +225,38 @@ CREATE TABLE notebooks (
     completed_at      TIMESTAMPTZ
 );
 CREATE INDEX idx_notebooks_user ON notebooks (user_id, created_at DESC);
+
+-- ---------------------------------------------------------------------------
+-- Quizzes (STUDY hub): upload a PDF, the worker turns it into a
+-- multiple-choice practice quiz. Same single-use source-file policy as
+-- notebooks. Ported from a standalone project (Trivisum) into this app's
+-- architecture — see the "Trivisum Integration" plan for context.
+-- ---------------------------------------------------------------------------
+CREATE TABLE quizzes (
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id           BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    original_filename TEXT        NOT NULL,
+    source_type       TEXT        NOT NULL DEFAULT 'pdf'
+                      CHECK (source_type IN ('pdf', 'pptx', 'mp3')),
+    storage_path      TEXT,                                   -- cleared once processed
+    title             TEXT,                                   -- derived from filename, shown in the list
+    language          TEXT        NOT NULL DEFAULT 'en'
+                      CHECK (language IN ('en', 'he')),
+    difficulty        TEXT        NOT NULL DEFAULT 'medium'
+                      CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    questions         JSONB,                                  -- [{question, options: string[4], answer, explanation}]
+    status            TEXT        NOT NULL DEFAULT 'pending'
+                      CHECK (status IN ('pending', 'running', 'done', 'failed')),
+    error             TEXT,
+    -- Extracted/transcribed source text, kept (unlike the source file) so
+    -- "generate more" can regenerate against the same source without
+    -- re-uploading. Nullable — quizzes created before this feature don't
+    -- have it.
+    source_text                TEXT,
+    generating_more            BOOLEAN     NOT NULL DEFAULT false,
+    generate_more_error        TEXT,       -- separate from `error`, which stays reserved for original generation failures
+    generate_more_started_at   TIMESTAMPTZ, -- lets a stuck job (worker killed mid-run) self-heal instead of wedging the quiz forever
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    completed_at      TIMESTAMPTZ
+);
+CREATE INDEX idx_quizzes_user ON quizzes (user_id, created_at DESC);

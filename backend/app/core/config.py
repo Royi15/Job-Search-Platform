@@ -61,6 +61,22 @@ class Settings(BaseSettings):
     max_notebook_audio_bytes: int = 150 * 1024 * 1024
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Trivisum runs against the platform's own Gemini key — a cap on how
+    # many quizzes a user can have AT ONCE (deleting frees up a slot,
+    # explicitly chosen over a harder-to-game lifetime counter for
+    # friendlier UX). "Generate more" on an existing quiz doesn't count
+    # against this; it has its own separate 100-questions-per-quiz cap
+    # instead. Easy to raise later; starting conservative since this is a
+    # new, unmeasured cost.
+    quiz_generation_limit: int = 30
+    # Same reasoning and pattern as quiz_generation_limit (max AT ONCE, not
+    # lifetime — deleting frees a slot) — notebooks share the same
+    # platform-owned key, and an MP3 notebook (Files API + up to 65536
+    # output tokens + a 420s generation call) is actually the single most
+    # expensive generation path in the app, more so than a quiz. Kept as
+    # its own separate value so the two can be tuned independently.
+    notebook_generation_limit: int = 30
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -7,6 +7,7 @@ from app.models.resume import Resume
 from app.models.generation import AIGeneration, GenerationKind
 from app.models.interview import InterviewSession
 from app.models.notebook import Notebook
+from app.models.quiz import Quiz
 
 __all__ = [
     "InterviewSession",
@@ -21,4 +22,5 @@ __all__ = [
     "AIGeneration",
     "GenerationKind",
     "Notebook",
+    "Quiz",
 ]

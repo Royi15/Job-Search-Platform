@@ -8,6 +8,7 @@ import asyncio
 import base64
 import json
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -128,6 +129,38 @@ def _escape_stray_backslashes(text: str) -> str:
     return "".join(out)
 
 
+# A comma immediately (allowing whitespace) before a closing } or ] is
+# never valid JSON — the only place this pattern can legitimately occur is
+# as a mistaken trailing comma after the last item of an object/array
+# (valid in JS/Python, not in strict JSON), a very common LLM slip when
+# writing a long array of similar objects. Stripping it is safe in
+# practice: the alternative (a comma-then-brace sequence appearing inside
+# real string content, e.g. prose mentioning a set like "{1, 2, 3}") would
+# need the comma directly adjacent to the closing character with nothing
+# else between, which essentially never happens in this app's content.
+_TRAILING_COMMA_RE = re.compile(r",(\s*[}\]])")
+
+
+def _strip_trailing_commas(text: str) -> str:
+    return _TRAILING_COMMA_RE.sub(r"\1", text)
+
+
+def _extract_retry_delay(response_text: str) -> str | None:
+    """Best-effort read of Gemini's suggested wait time from a 429 response
+    body (a RetryInfo detail with a "19s"-style retryDelay string). Returns
+    None on any parsing hiccup — this only makes the error message nicer,
+    it should never be able to break the actual error path."""
+    try:
+        details = json.loads(response_text).get("error", {}).get("details", [])
+        for detail in details:
+            delay = detail.get("retryDelay")
+            if isinstance(delay, str) and delay:
+                return delay
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        pass
+    return None
+
+
 async def generate(
     prompt: str,
     *,
@@ -185,6 +218,18 @@ async def generate(
                 raise LLMError(f"LLM request failed twice: {type(exc).__name__}") from exc
             logger.warning("LLM request %s — retrying once", type(exc).__name__)
 
+    if response.status_code == 429:
+        # Gemini's per-minute token quota, not something a per-user request
+        # cap can prevent (concurrent users alone can exceed it) — this is
+        # expected to happen occasionally, so it gets a specific, honest
+        # message instead of a generic "HTTP 429" the user can't act on.
+        logger.warning("LLM rate-limited (HTTP 429): %s", response.text[:500])
+        retry_hint = _extract_retry_delay(response.text)
+        wait_for = f" Try again in about {retry_hint}." if retry_hint else " Try again in a few minutes."
+        raise LLMError(
+            "The AI service is temporarily rate-limited (too many requests "
+            f"in the last minute) — this isn't an error with your file.{wait_for}"
+        )
     if response.status_code != 200:
         logger.error("LLM HTTP %s: %s", response.status_code, response.text[:500])
         raise LLMError(f"LLM request failed with HTTP {response.status_code}")
@@ -227,9 +272,24 @@ async def generate_json(
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    # Fallback: the model likely embedded LaTeX (or similar) with un-doubled
-    # backslashes. Repair and retry once before giving up.
+    # Fallback: repair the two most common LLM JSON mistakes seen in
+    # practice — un-doubled backslashes in embedded LaTeX, and a trailing
+    # comma before a closing brace/bracket (valid in JS, not in strict
+    # JSON) — and retry once before giving up. Both repairs are no-ops on
+    # text that doesn't have the corresponding problem, so applying both
+    # unconditionally is safe regardless of which one (if either) is
+    # actually needed.
+    repaired = _strip_trailing_commas(_escape_stray_backslashes(text))
     try:
-        return json.loads(_escape_stray_backslashes(text))
+        return json.loads(repaired)
     except json.JSONDecodeError as exc:
+        # This is the only place the raw broken response is ever visible —
+        # without it, "invalid JSON" gives no way to tell an unescaped
+        # quote from a truncated response from something else entirely.
+        logger.error(
+            "LLM JSON parse failed even after backslash-escape + "
+            "trailing-comma repair (%s at char %d). Raw response "
+            "(truncated to 4000 chars): %s",
+            exc.msg, exc.pos, text[:4000],
+        )
         raise LLMError("LLM returned invalid JSON") from exc

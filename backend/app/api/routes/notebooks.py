@@ -2,7 +2,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Form, HTTPException, UploadFile, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.deps import DB, CurrentUser, Queue
 from app.core.config import get_settings
@@ -57,6 +57,21 @@ async def upload_notebook_source(
             f"File exceeds {max_bytes // (1024 * 1024)} MB limit",
         )
 
+    # Cap on how many notebooks a user can have AT ONCE, not a lifetime
+    # total — deleting one frees up a slot. Same reasoning and pattern as
+    # quizzes' cap (routes/quizzes.py): not race-proof under concurrent
+    # uploads from the same user, an acceptable, self-correcting gap for a
+    # soft UX cap.
+    current_count = await db.scalar(
+        select(func.count()).select_from(Notebook).where(Notebook.user_id == user.id)
+    )
+    if current_count >= settings.notebook_generation_limit:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"You've reached the limit of {settings.notebook_generation_limit} notebooks. "
+            "Delete one to make room for a new one.",
+        )
+
     user_dir = Path(settings.upload_dir) / str(user.id)
     user_dir.mkdir(parents=True, exist_ok=True)
     storage_path = user_dir / f"{uuid.uuid4()}.{source_type}"
@@ -79,11 +94,15 @@ async def upload_notebook_source(
 
 @router.get("", response_model=list[NotebookOut])
 async def list_notebooks(user: CurrentUser, db: DB):
+    # The frontend treats this list's length as the user's current notebook
+    # count (for showing "X / limit" and gating the upload form), so this
+    # limit must never be lower than notebook_generation_limit — otherwise
+    # a user actually at the cap would see a truncated, understated count.
     result = await db.scalars(
         select(Notebook)
         .where(Notebook.user_id == user.id)
         .order_by(Notebook.created_at.desc())
-        .limit(30)
+        .limit(get_settings().notebook_generation_limit)
     )
     return result.all()
 

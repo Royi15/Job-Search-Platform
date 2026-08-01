@@ -14,6 +14,14 @@ const SOURCE_ICON: Record<Notebook["source_type"], string> = {
   mp3: "🎧",
 };
 
+// Mirrors backend's settings.notebook_generation_limit — a cap on how many
+// notebooks a user can have AT ONCE (deleting one frees up a slot). The
+// backend is the real enforcement point; this just lets the upload form
+// hide itself with an accurate message instead of failing with a 429.
+// notebooks.length is an accurate live count of this because GET
+// /notebooks is capped at this same limit server-side.
+const MAX_NOTEBOOKS_PER_USER = 30;
+
 // Every notebook gets its own color identity derived from its subject
 // ("Chemistry" always lands on the same hue, "Machine Learning" a totally
 // different one) instead of a fixed rainbow cycled the same way every time —
@@ -305,6 +313,8 @@ export default function Notebooks() {
   }
 
   // ---------- List view ----------
+  const atNotebookLimit = notebooks.length >= MAX_NOTEBOOKS_PER_USER;
+
   return (
     <div>
       <h1>📓 Notebook Generator</h1>
@@ -314,31 +324,43 @@ export default function Notebooks() {
       </p>
 
       <div className="panel" style={{ maxWidth: 560 }}>
-        <label>Notebook language</label>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value as "en" | "he")}
-          disabled={uploading}
-          style={{ marginBottom: 14 }}
-        >
-          <option value="en">English</option>
-          <option value="he">עברית (Hebrew)</option>
-        </select>
-        <label>Upload source (PDF/PPTX up to 20 MB, MP3 up to 150 MB)</label>
-        <input
-          ref={fileInput}
-          type="file"
-          accept=".pdf,.pptx,.mp3,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,audio/mpeg"
-          disabled={uploading}
-          onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
-        />
-        {error && <div className="auth-error" style={{ marginTop: 8 }}>{error}</div>}
+        <div className="meta" style={{ marginBottom: 14 }} dir="ltr">
+          {notebooks.length} / {MAX_NOTEBOOKS_PER_USER} notebooks
+        </div>
+        {atNotebookLimit ? (
+          <div className="empty">
+            You've reached the limit of {MAX_NOTEBOOKS_PER_USER} notebooks. Delete one below to
+            make room for a new one.
+          </div>
+        ) : (
+          <>
+            <label>Notebook language</label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as "en" | "he")}
+              disabled={uploading}
+              style={{ marginBottom: 14 }}
+            >
+              <option value="en">English</option>
+              <option value="he">עברית (Hebrew)</option>
+            </select>
+            <label>Upload source (PDF/PPTX up to 20 MB, MP3 up to 150 MB)</label>
+            <input
+              ref={fileInput}
+              type="file"
+              accept=".pdf,.pptx,.mp3,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,audio/mpeg"
+              disabled={uploading}
+              onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
+            />
+            {error && <div className="auth-error" style={{ marginTop: 8 }}>{error}</div>}
+          </>
+        )}
       </div>
 
       <div className="stack" style={{ marginTop: 20 }}>
         {notebooks.map((n) => (
           <div
-            className="panel"
+            className={`panel${n.status === "done" ? " list-card" : ""}`}
             key={n.id}
             style={{ cursor: n.status === "done" ? "pointer" : "default" }}
             onClick={() => n.status === "done" && setSelectedId(n.id)}

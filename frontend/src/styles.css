@@ -193,6 +193,12 @@ a.feature-card:hover { border-color: var(--blue); }
 .panel h3 { margin: 0 0 6px; font-size: 15px; }
 .panel .meta { color: var(--muted); font-size: 12px; }
 .panel .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+/* Applied only to clickable list cards (a "done" notebook/quiz you can
+   open) — hover lifts the card and highlights it, same accent-on-hover
+   convention as .feature-card, so it's clear at a glance which cards are
+   actually interactive. */
+.list-card { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+.list-card:hover { transform: translateY(-3px); border-color: var(--blue); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35); }
 .empty { color: var(--muted); border: 1px dashed var(--border); border-radius: var(--radius); padding: 28px; text-align: center; max-width: 860px; }
 .empty-gif { width: min(220px, 60vw); max-width: 100%; border-radius: 12px; }
 /* Full-page empty state: no box, just centered content in the viewport */
@@ -359,6 +365,62 @@ a.feature-card:hover { border-color: var(--blue); }
 }
 .notebook-page-next { animation: notebook-page-in-next 0.25s ease; }
 .notebook-page-prev { animation: notebook-page-in-prev 0.25s ease; }
+
+/* ============ Trivisum (quiz) ============ */
+.quiz-question-panel { display: flex; flex-direction: column; gap: 16px; }
+.quiz-question { margin: 0; font-size: 19px; line-height: 1.4; }
+.quiz-options { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.quiz-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s ease, box-shadow 0.12s ease;
+}
+/* Only the not-yet-answered state gets the hover lift — once an option is
+   locked in as correct/incorrect, it shouldn't visually jump around. */
+.quiz-option:not(.correct):not(.incorrect):hover {
+  background: var(--panel-2);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.quiz-option.correct { border-color: var(--green); background: color-mix(in srgb, var(--green) 14%, var(--bg-soft)); }
+.quiz-option.incorrect { border-color: var(--red); background: color-mix(in srgb, var(--red) 14%, var(--bg-soft)); }
+.quiz-option-text { flex: 1; }
+.quiz-mark { font-size: 15px; flex-shrink: 0; }
+.quiz-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.quiz-explanation {
+  border-inline-start: 3px solid var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 10%, transparent);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.quiz-explanation p { margin: 4px 0 0; color: var(--muted); }
+
+/* Results screen — a circular score ring ported from the original
+   Trivisum project, recolored to this app's dark theme. Rotated -90deg so
+   the arc starts at 12 o'clock; stroke-dasharray is set inline per the
+   actual score, and the CSS transition animates it in on mount. */
+.quiz-results { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.quiz-ring-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto 20px; }
+.quiz-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.quiz-ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+.quiz-ring-fg { fill: none; stroke: var(--green); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.8s ease-out; }
+.quiz-ring-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.quiz-ring-score { font-size: 26px; font-weight: 800; }
+.quiz-ring-total { color: var(--muted); font-size: 14px; }
+.quiz-results-stats { display: flex; gap: 24px; font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+.quiz-results-actions { display: flex; gap: 10px; }
+.quiz-generate-more { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); width: 100%; text-align: center; }
 
 /* ============ Interview simulator ============ */
 .interview-shell { max-width: 860px; display: flex; flex-direction: column; }

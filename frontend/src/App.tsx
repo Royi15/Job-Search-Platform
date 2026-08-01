@@ -12,7 +12,6 @@ import Resumes from "./features/resumes/Resumes";
 import Tailor from "./features/ai/Tailor";
 import CoverLetter from "./features/ai/CoverLetter";
 import Settings from "./features/settings/Settings";
-import Trivisum from "./features/trivisum/Trivisum";
 
 // Lazy: pulls in CodeMirror + language packages (~700KB) only when someone
 // actually opens the interview simulator, not on every page load.
@@ -20,6 +19,9 @@ const Interview = lazy(() => import("./features/interview/Interview"));
 // Lazy: pulls in KaTeX (math rendering) only when someone opens the
 // notebook generator, not on every page load.
 const Notebooks = lazy(() => import("./features/notebooks/Notebooks"));
+// Lazy: shares MathText/KaTeX with Notebooks but no reason to load it
+// before someone actually opens Trivisum.
+const Trivisum = lazy(() => import("./features/trivisum/Trivisum"));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -73,7 +75,14 @@ export default function App() {
                   </Suspense>
                 }
               />
-              <Route path="trivisum" element={<Trivisum />} />
+              <Route
+                path="trivisum"
+                element={
+                  <Suspense fallback={<div className="page-loader">Loading…</div>}>
+                    <Trivisum />
+                  </Suspense>
+                }
+              />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

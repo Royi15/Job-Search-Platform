@@ -58,6 +58,12 @@ def _collapse_exploded_line(line: str) -> str:
 def extract_pdf_text(path: str) -> str:
     reader = PdfReader(path)
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    # Some PDFs (font/encoding quirks) embed literal NUL bytes in their text
+    # streams. Postgres refuses to store \x00 in any text/JSONB column
+    # regardless of encoding, which would otherwise fail far downstream —
+    # after a successful, possibly expensive LLM generation — when the
+    # extracted text (or content derived from it) finally gets saved.
+    text = text.replace("\x00", "")
     return "\n".join(_collapse_exploded_line(line) for line in text.splitlines())
 
 

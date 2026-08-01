@@ -20,6 +20,7 @@ from app.api.routes import (
     jobs,
     notebooks,
     preferences,
+    quizzes,
     resumes,
     telegram,
 )
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
         ai.router,
         interview.router,
         notebooks.router,
+        quizzes.router,
         telegram.router,
     ):
         app.include_router(router)

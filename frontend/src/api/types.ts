@@ -178,3 +178,27 @@ export interface Notebook {
   created_at: string;
   completed_at: string | null;
 }
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
+
+export interface Quiz {
+  id: number;
+  original_filename: string;
+  source_type: "pdf" | "pptx" | "mp3";
+  title: string | null;
+  language: "en" | "he";
+  difficulty: "easy" | "medium" | "hard";
+  questions: QuizQuestion[] | null;
+  status: "pending" | "running" | "done" | "failed";
+  error: string | null;
+  can_generate_more: boolean;
+  generating_more: boolean;
+  generate_more_error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
