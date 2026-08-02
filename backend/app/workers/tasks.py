@@ -6,10 +6,12 @@ worker in settings.py) and reuses the same services/ code the API uses.
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import undefer
 
 from app.models import (
     AIGeneration,
@@ -17,18 +19,23 @@ from app.models import (
     InterviewSession,
     Job,
     JobAlert,
+    Notebook,
+    Quiz,
     Resume,
     SearchPreference,
     User,
 )
 from app.services import cover_letter, discord, tailoring
 from app.services import interview as interview_engine
+from app.services import notebook as notebook_engine
+from app.services import quiz as quiz_engine
 from app.services import telegram as tg
 from app.services.ats_parser import (
     extract_pdf_text,
     extract_skills_llm,
     parse_resume_text,
 )
+from app.services.document_extract import extract_pptx_text
 from app.services.job_sources import FetchedJob, get_active_sources
 from app.services.matching import job_matches_preference
 
@@ -295,3 +302,202 @@ async def fetch_and_notify(ctx: dict) -> str:
     summary = f"fetched={len(fetched)} new={len(new_jobs)}"
     logger.info("fetch_and_notify done: %s", summary)
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Notebook generation (enqueued by POST /notebooks)
+# ---------------------------------------------------------------------------
+async def generate_notebook(ctx: dict, notebook_id: int) -> str:
+    """Extract + summarize a source file into a structured notebook. The
+    source file is deleted afterward either way — it's single-use, unlike a
+    resume which gets re-read on every tailoring run."""
+    async with ctx["db_factory"]() as db:
+        nb = await db.get(Notebook, notebook_id)
+        if nb is None:
+            return "notebook missing"
+
+        nb.status = "running"
+        await db.commit()
+
+        try:
+            if nb.source_type == "pdf":
+                text = await asyncio.to_thread(extract_pdf_text, nb.storage_path)
+                content = await notebook_engine.generate_from_text(text, nb.language)
+            elif nb.source_type == "pptx":
+                text = await asyncio.to_thread(extract_pptx_text, nb.storage_path)
+                content = await notebook_engine.generate_from_text(text, nb.language)
+            elif nb.source_type == "mp3":
+                audio_bytes = await asyncio.to_thread(Path(nb.storage_path).read_bytes)
+                content = await notebook_engine.generate_from_audio(
+                    audio_bytes, "audio/mpeg", nb.language
+                )
+            else:
+                raise ValueError(f"Unsupported source_type: {nb.source_type}")
+
+            nb.content = content
+            nb.title = content.get("title") or nb.original_filename
+            nb.status = "done"
+        except Exception as exc:
+            logger.exception("Notebook generation %s failed", notebook_id)
+            nb.error = f"{type(exc).__name__}: {exc}"[:500].strip(": ")
+            nb.status = "failed"
+        finally:
+            # Delete the source regardless of outcome — no orphaned uploads
+            # piling up on the VM even if generation failed.
+            if nb.storage_path:
+                Path(nb.storage_path).unlink(missing_ok=True)
+                nb.storage_path = None
+
+        nb.completed_at = datetime.now(timezone.utc)
+        final_status = nb.status
+        try:
+            await db.commit()
+        except Exception as exc:
+            # A failure here (bad byte sequence, oversized value, etc.)
+            # would otherwise crash the task with the row already committed
+            # at status="running" from earlier — wedging it there forever,
+            # since nothing else would ever come back and retry it.
+            logger.exception(
+                "Notebook %s: final commit failed — marking failed instead "
+                "of leaving it stuck", notebook_id,
+            )
+            await db.rollback()
+            final_status = "failed"
+            await db.execute(
+                update(Notebook)
+                .where(Notebook.id == notebook_id)
+                .values(
+                    status="failed",
+                    error=f"Save failed: {type(exc).__name__}: {exc}"[:500].strip(": "),
+                    content=None,
+                    completed_at=datetime.now(timezone.utc),
+                )
+            )
+            await db.commit()
+        return f"notebook {notebook_id}: {final_status}"
+
+
+# ---------------------------------------------------------------------------
+# Quiz generation (enqueued by POST /quizzes)
+# ---------------------------------------------------------------------------
+async def generate_quiz(ctx: dict, quiz_id: int) -> str:
+    """Extract/transcribe a source file and turn it into a multiple-choice
+    quiz. The source file is deleted afterward either way — same
+    single-use policy as notebooks."""
+    async with ctx["db_factory"]() as db:
+        quiz = await db.get(Quiz, quiz_id)
+        if quiz is None:
+            return "quiz missing"
+
+        quiz.status = "running"
+        await db.commit()
+
+        try:
+            if quiz.source_type == "pdf":
+                text = await asyncio.to_thread(extract_pdf_text, quiz.storage_path)
+            elif quiz.source_type == "pptx":
+                text = await asyncio.to_thread(extract_pptx_text, quiz.storage_path)
+            elif quiz.source_type == "mp3":
+                audio_bytes = await asyncio.to_thread(Path(quiz.storage_path).read_bytes)
+                text = await quiz_engine.transcribe_audio(audio_bytes, "audio/mpeg")
+            else:
+                raise ValueError(f"Unsupported source_type: {quiz.source_type}")
+            # Kept (unlike the source file, which stays single-use) so
+            # "generate more" can regenerate against the same source later
+            # — a transcript for mp3, extracted text for pdf/pptx, treated
+            # identically from here on.
+            quiz.source_text = text
+            quiz.questions = await quiz_engine.generate_quiz(text, quiz.difficulty, quiz.language)
+            quiz.status = "done"
+        except Exception as exc:
+            logger.exception("Quiz generation %s failed", quiz_id)
+            quiz.error = f"{type(exc).__name__}: {exc}"[:500].strip(": ")
+            quiz.status = "failed"
+        finally:
+            if quiz.storage_path:
+                Path(quiz.storage_path).unlink(missing_ok=True)
+                quiz.storage_path = None
+
+        quiz.completed_at = datetime.now(timezone.utc)
+        final_status = quiz.status
+        try:
+            await db.commit()
+        except Exception as exc:
+            # Same rationale as generate_notebook's final-commit guard: a
+            # save-time failure here would otherwise wedge the row at
+            # status="running" forever with nothing to retry it.
+            logger.exception(
+                "Quiz %s: final commit failed — marking failed instead of "
+                "leaving it stuck", quiz_id,
+            )
+            await db.rollback()
+            final_status = "failed"
+            await db.execute(
+                update(Quiz)
+                .where(Quiz.id == quiz_id)
+                .values(
+                    status="failed",
+                    error=f"Save failed: {type(exc).__name__}: {exc}"[:500].strip(": "),
+                    questions=None,
+                    source_text=None,
+                    completed_at=datetime.now(timezone.utc),
+                )
+            )
+            await db.commit()
+        return f"quiz {quiz_id}: {final_status}"
+
+
+# ---------------------------------------------------------------------------
+# Generate more quiz questions (enqueued by POST /quizzes/{id}/generate-more)
+# ---------------------------------------------------------------------------
+async def generate_more_questions(ctx: dict, quiz_id: int) -> str:
+    """Tops up an existing quiz from its already-extracted source text. The
+    route's atomic UPDATE already claimed `generating_more` before
+    enqueueing this — this task's job is just to run the generation and
+    always clear that flag when done, success or failure."""
+    async with ctx["db_factory"]() as db:
+        # source_text is deferred on the model (never loaded on ordinary
+        # queries — it's the reason list/poll queries stay cheap); this is
+        # the one place it's actually needed, so explicitly undefer it.
+        quiz = await db.get(Quiz, quiz_id, options=[undefer(Quiz.source_text)])
+        if quiz is None:
+            return "quiz missing"
+
+        try:
+            new_questions = await quiz_engine.generate_more(
+                quiz.source_text, quiz.questions or [], quiz.difficulty, quiz.language
+            )
+            # Reassignment, not .append() — questions is a plain JSONB
+            # column (no MutableList wrapper), so an in-place mutation
+            # wouldn't be detected as a change by SQLAlchemy.
+            quiz.questions = (quiz.questions or []) + new_questions
+            quiz.generate_more_error = None
+        except Exception as exc:
+            logger.exception("Generate-more failed for quiz %s", quiz_id)
+            quiz.generate_more_error = f"{type(exc).__name__}: {exc}"[:500].strip(": ")
+        finally:
+            quiz.generating_more = False
+
+        try:
+            await db.commit()
+        except Exception as exc:
+            # Same rationale as generate_quiz's final-commit guard. This
+            # one also has the 35-minute stuck-job fallback in the route's
+            # atomic UPDATE guard as a second safety net, but there's no
+            # reason to make the user wait that long when we can just fix
+            # it immediately.
+            logger.exception(
+                "Quiz %s: generate-more commit failed — clearing "
+                "generating_more instead of leaving it stuck", quiz_id,
+            )
+            await db.rollback()
+            await db.execute(
+                update(Quiz)
+                .where(Quiz.id == quiz_id)
+                .values(
+                    generating_more=False,
+                    generate_more_error=f"Save failed: {type(exc).__name__}: {exc}"[:500].strip(": "),
+                )
+            )
+            await db.commit()
+        return f"quiz {quiz_id}: generate-more done"

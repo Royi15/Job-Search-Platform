@@ -18,6 +18,8 @@ managing many job applications, and getting past automated resume screeners (ATS
 
 ## ✨ Features
 
+### 🧭 Job Search
+
 1. 🔔 **Real-Time Job Alerts** — users define search preferences; a background
    worker polls external job APIs. Every new student job is broadcast to a
    community **Discord channel**, and jobs matching a user's saved criteria
@@ -33,52 +35,75 @@ managing many job applications, and getting past automated resume screeners (ATS
    questions (15 min each, real-interview weight) with an AI-graded report
    (score /100, per-question review, strengths/improvements) at the end.
 
+### 📚 Study Tools
+
+6. 📓 **AI Notebook Generator** — upload a PDF, PowerPoint, or MP3 recording;
+   an LLM turns it into a structured study notebook with headings, bullet
+   points, tables, and diagrams — with full Hebrew/RTL and LaTeX math support.
+7. 📝 **Trivisum Practice Quizzes** — turn the same source types into a
+   scored multiple-choice practice quiz, then top it up any time with fresh,
+   non-repeating questions from the same source via **Generate More**.
+
 ## 📸 App Walkthrough
 
-### 📋 Application Board
+### 🧭 Job Search
+
+#### 📋 Application Board
 An interactive Kanban board to seamlessly track your job application process from screening to offer.
 <br/>
 <img src="./docs/assets/Board.png" alt="Application Board" width="800" />
 
-### 🎯 Search Preferences & Job Alerts
+#### 🎯 Search Preferences & Job Alerts
 Define specific keywords and locations. Background workers scrape and check for matches hourly, delivering targeted roles directly to your dashboard and Telegram.
 <br/>
 <img src="./docs/assets/Preferences.png" alt="Search Preferences" width="800" />
 <br/><br/>
 <img src="./docs/assets/Job Alerts.png" alt="Job Alerts" width="800" />
 
-### 📄 Resume ATS Parsing
+#### 📄 Resume ATS Parsing
 Upload your PDF resume to simulate exactly how real-world ATS screening robots extract and map your technical skills.
 <br/>
 <img src="./docs/assets/Resumes.png" alt="Resume Parser" width="800" />
 
-### 🦹 ATS Tailor
+#### 🦹 ATS Tailor
 Analyze the keyword gap between your resume and a specific job description, seamlessly adjusting your resume to bypass ATS filters.
 <br/>
 <img src="./docs/assets/ATSTailor.gif" alt="ATS Tailor Action" width="800" />
 
-### ✨ Magic Cover Letter
+#### ✨ Magic Cover Letter
 Generate highly targeted cover letters and recruiter messages grounded strictly in your actual resume and the job requirements.
 <br/>
 <img src="./docs/assets/Cover Letter.png" alt="Cover Letter" width="800" />
 
-### 🎙️ AI Interview Simulator
+#### 🎙️ AI Interview Simulator
 A comprehensive, multi-stage interactive interview environment powered by the Gemini API.
 
-#### Stage 1: Behavioral & Background
+##### Stage 1: Behavioral & Background
 Practice common HR and behavioral questions with dynamic, context-aware AI follow-ups.
 <br/>
 <img src="./docs/assets/Interview Simulator - Stage 1 type question.png" alt="Interview Stage 1" width="800" />
 
-#### Stage 2: Technical Round (Interactive IDE)
+##### Stage 2: Technical Round (Interactive IDE)
 Solve algorithmic challenges and system design questions in a built-in code editor while managing time constraints.
 <br/>
 <img src="./docs/assets/Interview Simulator - Stage 2 type questions .png" alt="Interview Stage 2" width="800" />
 
-#### 📊 Final Grade & Performance Report
+##### 📊 Final Grade & Performance Report
 Upon completion, receive a detailed evaluation including communication skills, architectural approach, and specific code complexity feedback.
 <br/>
 <img src="./docs/assets/Interview Simulator - Grade stage.png" alt="Full Interview Report" width="600" />
+
+### 📚 Study Tools
+
+#### 📓 AI Notebook Generator
+Upload a PDF, PowerPoint, or MP3 recording and get back a structured study notebook — headings, bullet points, tables, and diagrams — with full Hebrew/RTL and LaTeX math support.
+<br/>
+<img src="./docs/assets/Notebooks.png" alt="AI Notebook Generator" width="800" />
+
+#### 📝 Trivisum Practice Quizzes
+Turn the same source material into a scored multiple-choice practice quiz, then top it up any time with fresh, non-repeating questions via Generate More.
+<br/>
+<img src="./docs/assets/Trivisum.png" alt="Trivisum Practice Quiz" width="800" />
 
 ## 🛠️ Stack
 

@@ -28,7 +28,7 @@ export default function AlertsFeed() {
     <div>
       <h1>Job Alerts</h1>
       <p className="page-sub">
-        Jobs that matched your <Link to="/app/preferences" style={{ color: "var(--blue)" }}>preferences</Link>.
+        Jobs that matched your <Link to="/app/job/preferences" style={{ color: "var(--blue)" }}>preferences</Link>.
         The worker checks LinkedIn every hour; matches also arrive on Telegram.
       </p>
       {loaded && alerts.length === 0 && (
@@ -45,7 +45,7 @@ export default function AlertsFeed() {
           </p>
           <p style={{ margin: 0 }}>
             No preference yet?{" "}
-            <Link to="/app/preferences" style={{ color: "var(--blue)", fontWeight: 600 }}>
+            <Link to="/app/job/preferences" style={{ color: "var(--blue)", fontWeight: 600 }}>
               Add one
             </Link>
             . Got some? Give the bot a little time — it checks for new jobs

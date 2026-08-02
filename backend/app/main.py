@@ -18,7 +18,9 @@ from app.api.routes import (
     auth,
     interview,
     jobs,
+    notebooks,
     preferences,
+    quizzes,
     resumes,
     telegram,
 )
@@ -61,6 +63,8 @@ def create_app() -> FastAPI:
         resumes.router,
         ai.router,
         interview.router,
+        notebooks.router,
+        quizzes.router,
         telegram.router,
     ):
         app.include_router(router)

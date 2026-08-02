@@ -143,3 +143,62 @@ export interface Generation {
   created_at: string;
   completed_at: string | null;
 }
+
+export type NotebookBlock =
+  | { type: "text"; content: string }
+  | { type: "bullets"; items: string[] }
+  | { type: "table"; headers: string[]; rows: string[][] }
+  | { type: "callout"; content: string }
+  | { type: "diagram"; content: string };
+
+export interface NotebookPageContent {
+  heading: string;
+  icon?: string;
+  blocks: NotebookBlock[];
+}
+
+export interface NotebookContent {
+  title?: string;
+  subject?: string;
+  paper_style?: "grid" | "lined";
+  summary?: string;
+  pages: NotebookPageContent[];
+  key_terms?: { term: string; definition: string }[];
+}
+
+export interface Notebook {
+  id: number;
+  original_filename: string;
+  source_type: "pdf" | "pptx" | "mp3";
+  title: string | null;
+  language: "en" | "he";
+  content: NotebookContent | null;
+  status: "pending" | "running" | "done" | "failed";
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
+
+export interface Quiz {
+  id: number;
+  original_filename: string;
+  source_type: "pdf" | "pptx" | "mp3";
+  title: string | null;
+  language: "en" | "he";
+  difficulty: "easy" | "medium" | "hard";
+  questions: QuizQuestion[] | null;
+  status: "pending" | "running" | "done" | "failed";
+  error: string | null;
+  can_generate_more: boolean;
+  generating_more: boolean;
+  generate_more_error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}

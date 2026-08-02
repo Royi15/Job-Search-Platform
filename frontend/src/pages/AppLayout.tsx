@@ -1,35 +1,31 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { SECTIONS, type Hub } from "../config/sections";
+import ErrorBoundary from "../components/ErrorBoundary";
 
-const NAV = [
-  { to: "/app", label: "📋 Board", end: true },
-  { to: "/app/alerts", label: "🔔 Job Alerts" },
-  { to: "/app/preferences", label: "🎯 Preferences" },
-  { to: "/app/resumes", label: "📄 Resumes" },
-  { to: "/app/tailor", label: "🛡️ ATS Tailor" },
-  { to: "/app/cover-letter", label: "✨ Cover Letter" },
-  { to: "/app/interview", label: "🎤 Interview Sim" },
-  { to: "/app/settings", label: "⚙️ Settings" },
-];
-
-export default function AppLayout() {
+export default function AppLayout({ hub }: { hub: Hub }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const items = SECTIONS.filter((s) => s.hub === hub);
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">
+        <Link to="/app" className="brand" style={{ textDecoration: "none", color: "inherit" }}>
           Job<span style={{ color: "var(--yellow)" }}>Pilot</span>
-        </div>
-        {NAV.map((item) => (
+        </Link>
+        <Link to="/app" className="sidebar-back">
+          ← Back
+        </Link>
+        {items.map((item) => (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={item.path}
+            to={item.path}
             end={item.end}
             className={({ isActive }) => (isActive ? "active" : "")}
           >
-            {item.label}
+            {item.icon} {item.label}
           </NavLink>
         ))}
         <div className="spacer" />
@@ -45,7 +41,17 @@ export default function AppLayout() {
         </button>
       </aside>
       <main className="main">
-        <Outlet />
+        <ErrorBoundary
+          key={location.pathname}
+          fallback={
+            <div className="empty">
+              Something went wrong displaying this page. Try navigating to another page from
+              the sidebar, or refresh.
+            </div>
+          }
+        >
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

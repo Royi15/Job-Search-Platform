@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@600;700&family=Kalam:wght@300;400;700&display=swap');
+
 :root {
   --bg: #0a0d14;
   --bg-soft: #0f1420;
@@ -33,6 +35,21 @@ input, textarea, select {
   width: 100%;
 }
 input:focus, textarea:focus, select:focus { outline: 2px solid var(--blue); border-color: transparent; }
+input[type="file"] { padding: 8px; color: var(--muted); font-size: 13px; }
+input[type="file"]::file-selector-button {
+  background: var(--yellow);
+  color: #1a1a06;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  margin-inline-end: 12px;
+  transition: filter 0.15s;
+}
+input[type="file"]::file-selector-button:hover { filter: brightness(1.12); }
+input[type="file"]:disabled::file-selector-button { opacity: 0.5; cursor: not-allowed; }
 label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
 
 /* ============ Buttons ============ */
@@ -100,8 +117,42 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
   filter: drop-shadow(0 8px 24px rgba(59, 130, 246, 0.25));
 }
 
+/* ============ Feature spotlight rows (video/gif + text, alternating) ============ */
+.showcase { padding: 24px 64px 8px; width: 100%; display: grid; gap: 64px; }
+.showcase-row { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.showcase-row.reverse .showcase-media { order: 2; }
+.showcase-row.reverse .showcase-text { order: 1; }
+.showcase-media {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(245, 197, 24, 0.08));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+.showcase-media video { display: block; width: 100%; height: auto; }
+.showcase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+}
+.showcase-text h3 { font-size: 34px; font-weight: 800; margin: 0 0 20px; line-height: 1.2; letter-spacing: -0.3px; max-width: 480px; }
+.showcase-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 460px; }
+.showcase-points li { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 14.5px; line-height: 1.5; }
+.showcase-points .pt-icon { flex-shrink: 0; font-size: 17px; }
+
 .section { padding: 48px 64px; width: 100%; }
 .section h2 { font-size: 22px; margin-bottom: 24px; }
+.feature-group-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 28px 0 14px; }
+.section h2 + .feature-group-title { margin-top: 0; }
 .feature-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
 .feature-card {
   background: var(--panel);
@@ -130,16 +181,29 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 /* ============ App shell ============ */
 .app-shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
 .sidebar { background: var(--bg-soft); border-right: 1px solid var(--border); padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
-.sidebar .brand { padding: 0 10px 16px; }
+.sidebar .brand { padding: 0 10px 16px; font-size: 20px; font-weight: 800; }
 .sidebar a { padding: 9px 12px; border-radius: 8px; color: var(--muted); font-size: 14px; }
 .sidebar a:hover { color: var(--text); background: var(--panel); }
 .sidebar a.active { color: var(--text); background: var(--panel-2); font-weight: 600; }
+.sidebar a.sidebar-back { margin-bottom: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); border-radius: 0; }
 .sidebar .spacer { flex: 1; }
 .sidebar .user { font-size: 12px; color: var(--muted); padding: 0 10px 8px; overflow: hidden; text-overflow: ellipsis; }
 .main { padding: 28px 32px; overflow-x: auto; }
 .main h1 { font-size: 22px; margin: 0 0 4px; }
 .main .page-sub { color: var(--muted); font-size: 13px; margin: 0 0 24px; }
 .page-loader { display: grid; place-items: center; min-height: 60vh; color: var(--muted); }
+
+/* ============ Welcome / search ============ */
+.welcome-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 32px; border-bottom: 1px solid var(--border); }
+.welcome-hero { text-align: center; max-width: 640px; margin: 48px auto 0; }
+.welcome-hero .welcome-title { font-size: 50px; margin: 0 0 24px; }
+.search-wrap { position: relative; max-width: 420px; margin: 18px 0 36px; }
+.search-wrap-lg { max-width: 100%; margin: 0 auto; }
+.search-wrap-lg input { font-size: 17px; padding: 16px 20px; }
+.search-results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 10; padding: 6px; display: grid; gap: 2px; max-height: 320px; overflow-y: auto; }
+.search-result-item { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: none; color: var(--text); font: inherit; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.search-result-item:hover { background: var(--panel-2); }
+a.feature-card:hover { border-color: var(--blue); }
 
 /* ============ Kanban board ============ */
 .board { display: flex; gap: 14px; align-items: flex-start; min-height: 60vh; }
@@ -163,6 +227,12 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
 .panel h3 { margin: 0 0 6px; font-size: 15px; }
 .panel .meta { color: var(--muted); font-size: 12px; }
 .panel .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+/* Applied only to clickable list cards (a "done" notebook/quiz you can
+   open) — hover lifts the card and highlights it, same accent-on-hover
+   convention as .feature-card, so it's clear at a glance which cards are
+   actually interactive. */
+.list-card { transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease; }
+.list-card:hover { transform: translateY(-3px); border-color: var(--blue); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35); }
 .empty { color: var(--muted); border: 1px dashed var(--border); border-radius: var(--radius); padding: 28px; text-align: center; max-width: 860px; }
 .empty-gif { width: min(220px, 60vw); max-width: 100%; border-radius: 12px; }
 /* Full-page empty state: no box, just centered content in the viewport */
@@ -213,6 +283,178 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
   margin: 14px 0;
   max-width: 860px;
 }
+
+/* ============ Notebook generator ============ */
+/* A "paper page" floating inside the dark app chrome — ruled, light, with
+   its own local color scope so every nested rule below (which just uses
+   the shared var(--text)/var(--panel)/etc. tokens) automatically reads
+   correctly on a light page without being rewritten per-rule. --nb-accent
+   is set inline per-notebook from its subject, so different notebooks get
+   genuinely different color identities rather than one fixed look. The
+   ruling itself (grid vs. lined) is also content-driven — see .lined below —
+   since a math notebook and a language notebook don't want the same paper. */
+.notebook-paper {
+  --text: #202430;
+  --muted: #5b6472;
+  --panel: #ffffff;
+  --panel-2: #eef1f6;
+  --border: #d7dde6;
+  background-color: #fdfdfb;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 26px 26px;
+  border-radius: 14px;
+  padding: 32px 36px 40px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  color: var(--text);
+}
+/* Prose-heavy subjects (languages, history, law, ...) get ruled lines
+   instead of a grid — no vertical lines, wider spacing, like real notebook
+   paper meant for writing rather than diagrams/matrices. */
+.notebook-paper.lined {
+  background-image: linear-gradient(var(--border) 1px, transparent 1px);
+  background-size: 100% 32px;
+}
+.notebook-subject {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--nb-accent, var(--blue));
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px 11px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+.notebook-title { font-family: "Caveat", cursive; font-weight: 700; font-size: 44px; line-height: 1.1; margin: 0 0 8px; color: var(--nb-accent, var(--text)); }
+/* margin-inline (not a plain physical margin) so the box hugs the reading
+   start edge and only the trailing side absorbs the leftover width from
+   max-width — for RTL that's flush-right with slack on the left, which a
+   plain "margin: 0 0 26px" can't guarantee (it depends on the browser
+   correctly resolving an over-constrained box via 'direction', which
+   isn't something to rely on when explicit auto margins say it outright). */
+.notebook-summary { font-family: "Kalam", cursive; color: var(--muted); font-size: 15.5px; line-height: 1.6; margin-block: 0 26px; margin-inline: 0 auto; max-width: 640px; }
+/* No card/box — sits directly on the paper like everything else. */
+.notebook-section { background: transparent; border: none; padding: 6px 0; }
+.notebook-heading { margin: 0 0 12px; font-size: 20px; font-family: "Patrick Hand", cursive; letter-spacing: 0.3px; color: var(--text); }
+.notebook-section-icon { font-size: 1.05em; }
+/* A page's blocks (text/bullets/table, freely mixed and in any order) */
+.notebook-blocks { display: grid; gap: 14px; }
+.notebook-text { font-family: "Kalam", cursive; font-size: 15.5px; line-height: 1.65; margin: 0; color: var(--text); }
+.notebook-bullets { margin: 0; padding-inline-start: 4px; list-style: none; display: grid; gap: 10px; font-family: "Kalam", cursive; }
+.notebook-bullets li { position: relative; padding-inline-start: 22px; font-size: 15.5px; line-height: 1.6; }
+.notebook-bullets li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 4px;
+  top: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nb-accent, var(--blue));
+}
+.notebook-table { width: 100%; border-collapse: collapse; font-size: 14.5px; font-family: "Kalam", cursive; }
+.notebook-table th, .notebook-table td { padding: 8px 12px; text-align: start; border-bottom: 1px solid var(--border); }
+.notebook-table th { background: var(--panel-2); color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; font-family: "Patrick Hand", cursive; }
+.notebook-table tr:last-child td { border-bottom: none; }
+.notebook-glossary { margin: 0; display: grid; gap: 10px; }
+.notebook-glossary dt { font-family: "Patrick Hand", cursive; font-size: 17px; color: var(--text); }
+.notebook-glossary dd { font-family: "Kalam", cursive; margin: 2px 0 0; color: var(--muted); font-size: 14.5px; }
+
+/* A rare, spotlighted box — used sparingly per the prompt, so it needs to
+   actually stand out rather than blend in with regular text/bullets. */
+.notebook-callout {
+  border-inline-start: 3px solid var(--nb-accent, var(--blue));
+  background: color-mix(in srgb, var(--nb-accent, var(--blue)) 10%, transparent);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: "Kalam", cursive;
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+/* Mermaid always lays its diagram out left-to-right internally regardless
+   of the notebook's language, so the container stays centered/LTR the same
+   way a katex-block does. */
+.notebook-diagram { display: block; overflow-x: auto; margin: 14px 0; text-align: center; }
+.notebook-diagram svg { max-width: 100%; height: auto; }
+
+/* Math (KaTeX) — inherits the paper's local light-mode text color */
+.katex { color: var(--text); font-size: 1.05em; }
+.katex-block { display: block; overflow-x: auto; margin: 10px 0; padding: 4px 0; text-align: center; }
+
+/* Page navigation + the "flip" transition — a simple directional slide, not
+   a true 3D page-flip (that needs perspective transforms / dual-sided page
+   rendering, a much bigger build for a marginal look upgrade). */
+.notebook-nav { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 18px; }
+.notebook-nav .page-count { font-size: 13px; color: var(--muted); min-width: 96px; text-align: center; }
+@keyframes notebook-page-in-next {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes notebook-page-in-prev {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.notebook-page-next { animation: notebook-page-in-next 0.25s ease; }
+.notebook-page-prev { animation: notebook-page-in-prev 0.25s ease; }
+
+/* ============ Trivisum (quiz) ============ */
+.quiz-question-panel { display: flex; flex-direction: column; gap: 16px; }
+.quiz-question { margin: 0; font-size: 19px; line-height: 1.4; }
+.quiz-options { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.quiz-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s ease, box-shadow 0.12s ease;
+}
+/* Only the not-yet-answered state gets the hover lift — once an option is
+   locked in as correct/incorrect, it shouldn't visually jump around. */
+.quiz-option:not(.correct):not(.incorrect):hover {
+  background: var(--panel-2);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+.quiz-option.correct { border-color: var(--green); background: color-mix(in srgb, var(--green) 14%, var(--bg-soft)); }
+.quiz-option.incorrect { border-color: var(--red); background: color-mix(in srgb, var(--red) 14%, var(--bg-soft)); }
+.quiz-option-text { flex: 1; }
+.quiz-mark { font-size: 15px; flex-shrink: 0; }
+.quiz-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.quiz-explanation {
+  border-inline-start: 3px solid var(--yellow);
+  background: color-mix(in srgb, var(--yellow) 10%, transparent);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.quiz-explanation p { margin: 4px 0 0; color: var(--muted); }
+
+/* Results screen — a circular score ring ported from the original
+   Trivisum project, recolored to this app's dark theme. Rotated -90deg so
+   the arc starts at 12 o'clock; stroke-dasharray is set inline per the
+   actual score, and the CSS transition animates it in on mount. */
+.quiz-results { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.quiz-ring-wrap { position: relative; width: 150px; height: 150px; margin: 0 auto 20px; }
+.quiz-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.quiz-ring-bg { fill: none; stroke: var(--border); stroke-width: 8; }
+.quiz-ring-fg { fill: none; stroke: var(--green); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.8s ease-out; }
+.quiz-ring-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.quiz-ring-score { font-size: 26px; font-weight: 800; }
+.quiz-ring-total { color: var(--muted); font-size: 14px; }
+.quiz-results-stats { display: flex; gap: 24px; font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+.quiz-results-actions { display: flex; gap: 10px; }
+.quiz-generate-more { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); width: 100%; text-align: center; }
 
 /* ============ Interview simulator ============ */
 .interview-shell { max-width: 860px; display: flex; flex-direction: column; }
@@ -303,4 +545,31 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
   .form-row { grid-template-columns: 1fr; }
+  .showcase { padding: 20px 24px 4px; gap: 40px; }
+  .showcase-row { grid-template-columns: 1fr; gap: 18px; }
+  .showcase-row.reverse .showcase-media,
+  .showcase-row.reverse .showcase-text { order: initial; }
+}
+
+/* ============ Print (notebook PDF export) ============ */
+@media print {
+  /* Dark theme reads badly on paper/PDF — flip to an ink-friendly light
+     palette. Overriding the shared tokens means every component (panels,
+     accents, KaTeX color) follows without touching each rule individually. */
+  :root {
+    --bg: #ffffff;
+    --bg-soft: #f7f8fa;
+    --panel: #ffffff;
+    --panel-2: #f0f1f4;
+    --border: #d7dce4;
+    --text: #16181d;
+    --muted: #55606e;
+  }
+  .no-print { display: none !important; }
+  .sidebar, .welcome-header { display: none !important; }
+  .app-shell { display: block; }
+  .main { padding: 0; overflow: visible; }
+  body { background: #fff; }
+  .notebook-section, .notebook-table tr, .notebook-glossary > div, .notebook-callout, .notebook-diagram { break-inside: avoid; }
+  .notebook-heading { break-after: avoid; }
 }

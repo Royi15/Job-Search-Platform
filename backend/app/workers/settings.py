@@ -11,6 +11,9 @@ from app.core.config import get_settings
 from app.workers.tasks import (
     deliver_pending_alerts,
     fetch_and_notify,
+    generate_more_questions,
+    generate_notebook,
+    generate_quiz,
     grade_interview,
     match_preference,
     parse_resume,
@@ -40,6 +43,9 @@ class WorkerSettings:
         match_preference,
         deliver_pending_alerts,
         grade_interview,
+        generate_notebook,
+        generate_quiz,
+        generate_more_questions,
     ]
     cron_jobs = [
         # Hourly on the hour, 09:00-17:00 server-local time (VM timezone is
@@ -62,5 +68,17 @@ class WorkerSettings:
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     max_jobs = 4          # LLM calls are I/O-bound; 4 concurrent is plenty
-    job_timeout = 600     # room for a slow LLM call plus one retry
+    # Room for a slow LLM call plus one retry, PLUS a large-audio upload to
+    # Gemini's Files API ahead of it. Worst case is now an MP3 quiz upload
+    # (Trivisum): upload_file() up to ~360s (300s transfer + up to 60s
+    # polling), THEN a transcription call — quiz.py's
+    # TRANSCRIPTION_TIMEOUT_SECONDS=420s per attempt, one retry, 840s worst
+    # case — THEN the questions-JSON generation itself from that
+    # transcript — quiz.py's GENERATION_TIMEOUT_SECONDS=300s per attempt,
+    # one retry, 600s worst case. Sequential total: 360 + 840 + 600 =
+    # 1800s, before any extraction/DB overhead, so this needs real headroom
+    # above it. (Notebook generation's own worst case — upload + a single
+    # 420s-per-attempt generation, no separate transcription step — stays
+    # comfortably inside this same budget.)
+    job_timeout = 2700
     keep_result = 3600
