@@ -3,6 +3,7 @@ practice quiz. Ported from a standalone project (Trivisum) into this app's
 architecture — same design rule as notebook.py: the LLM only ever produces
 content within a fixed JSON shape."""
 import logging
+import random
 from typing import Any
 
 from app.services import llm
@@ -41,7 +42,10 @@ DEFAULT_DIFFICULTY = "medium"
 DIFFICULTY_INSTRUCTIONS = {
     "easy": (
         "Focus on basic facts and explicit information stated directly in "
-        "the text. Suitable for a first pass at the material."
+        "the text. Suitable for a first pass at the material. Distractors "
+        "should still be topically relevant (not absurd or off-topic), but "
+        "it's fine if a student who read the material carefully once can "
+        "rule them out fairly quickly."
     ),
     "medium": (
         "Where the source actually connects two ideas, prefer a question "
@@ -50,7 +54,11 @@ DIFFICULTY_INSTRUCTIONS = {
         "requirement: plenty of real source material is a list of "
         "separate, unconnected facts with nothing to relate to each other "
         "— for those, ask a plain, direct question about the fact itself "
-        "rather than skipping it for lack of a relationship to test."
+        "rather than skipping it for lack of a relationship to test. "
+        "Distractors should be genuinely plausible: things a student who "
+        "skimmed rather than studied could easily pick, e.g. a fact that's "
+        "true but answers a different question, or a common "
+        "misremembering of the real answer."
     ),
     "hard": (
         "Focus on deep analysis, less obvious implications, and "
@@ -58,7 +66,13 @@ DIFFICULTY_INSTRUCTIONS = {
         "can't answer just by skimming. Where the source is a list of "
         "independent facts with nothing to synthesize, test the least "
         "obvious or most easily confused facts rather than skipping ones "
-        "that don't fit a synthesis-style question."
+        "that don't fit a synthesis-style question. Distractors must be as "
+        "close to correct as possible without actually being correct — "
+        "differ from the right answer by one key detail (a number, a "
+        "name, a condition, a direction of cause/effect), draw on details "
+        "actually present in the source so nothing is a guess-from-vibes "
+        "elimination, and avoid any distractor a careful reader could "
+        "reject on general knowledge alone without needing the source."
     ),
 }
 
@@ -112,6 +126,15 @@ _QUESTIONS_SHAPE = """\
 # call sites.
 _STRUCTURAL_RULES = """\
 - "options" must have EXACTLY 4 entries, and all 4 must be distinct.
+- The correct option must NOT be identifiable by shape alone. In
+  particular: never make the correct option noticeably longer, more
+  detailed, or more specific than the three distractors (a classic tell —
+  a student can spot the "obviously more thorough" option without reading
+  any of them). Write all 4 options to a similar length, level of detail,
+  and grammatical form as each other.
+- The order of the 4 entries in "options" is irrelevant and ignored — do
+  not try to place the correct answer in any particular position, and do
+  not worry about varying its position across questions.
 - "answer" must be character-for-character identical to one of the 4
   strings in "options" — not a paraphrase, not a shortened version, the
   exact same text. This is critical: the app matches "answer" against
@@ -184,12 +207,19 @@ def _validate_question(q: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(answer, str) or not isinstance(q.get("question"), str):
         return None
     if answer in options:
-        return q
-    normalized = {o.strip().casefold(): o for o in options}
-    match = normalized.get(answer.strip().casefold())
-    if match is None:
-        return None
-    q["answer"] = match
+        pass
+    else:
+        normalized = {o.strip().casefold(): o for o in options}
+        match = normalized.get(answer.strip().casefold())
+        if match is None:
+            return None
+        q["answer"] = match
+    # Don't rely on the model to place the correct option randomly — it
+    # reliably doesn't (observed clustering on option 1 in practice).
+    # "answer" is matched against "options" by exact string equality
+    # everywhere downstream (frontend and _drop_duplicates), never by
+    # index, so reordering here is safe.
+    random.shuffle(options)
     return q
 
 

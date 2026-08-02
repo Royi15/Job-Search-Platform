@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const FEATURES = [
+const JOB_FEATURES = [
   {
     icon: "🔔",
     title: "Real-Time Job Alerts",
@@ -25,6 +25,60 @@ const FEATURES = [
     icon: "🎤",
     title: "AI Interview Simulator",
     text: "Practice a real behavioral + timed technical interview built from your resume and the job description, then get a graded report on where you stand.",
+  },
+];
+
+const STUDY_FEATURES = [
+  {
+    icon: "📓",
+    title: "AI Notebook Generator",
+    text: "Upload a PDF, PowerPoint, or MP3 recording and get back structured study notes — headlines, bullet points, tables, and diagrams, ready to review.",
+  },
+  {
+    icon: "📝",
+    title: "Trivisum Practice Quizzes",
+    text: "Turn any source material into a multiple-choice practice quiz, scored instantly, with a Generate More button whenever you want fresh questions.",
+  },
+];
+
+// One alternating video/text row per feature spotlight — even rows show the
+// clip on the left, odd rows flip it to the right (handled by the
+// "reverse" class in CSS), so the eye doesn't settle into one fixed pattern
+// scrolling down the page. Order follows what was explicitly asked for:
+// job search first, then interview prep, then study tools.
+const SHOWCASES = [
+  {
+    badge: "Job Search",
+    icon: "🎯",
+    title: "Set your preferences once, we do the hunting",
+    points: [
+      { icon: "🎯", text: "Set your titles, keywords, and locations once" },
+      { icon: "🔔", text: "Get pinged on Telegram the moment a match appears" },
+      { icon: "🕒", text: "We scan LinkedIn around the clock, not just when you check" },
+    ],
+    video: "/job-preferences.mp4",
+  },
+  {
+    badge: "Interview Prep",
+    icon: "🎤",
+    title: "Practice the real interview before it counts",
+    points: [
+      { icon: "🎤", text: "Real behavioral + timed technical interview questions" },
+      { icon: "📄", text: "Built from your actual resume and the job description" },
+      { icon: "📊", text: "Get a graded report showing exactly where you stand" },
+    ],
+    video: "/interview-simulator.mp4",
+  },
+  {
+    badge: "Study Tools",
+    icon: "📓",
+    title: "Turn any PDF, slideshow, or recording into study notes",
+    points: [
+      { icon: "📄", text: "Upload a PDF, PowerPoint, or MP3 recording" },
+      { icon: "📝", text: "AI turns it into headlines, bullets, tables, and diagrams" },
+      { icon: "🔁", text: "Turn it into a practice quiz with Trivisum, too" },
+    ],
+    video: "/notebooks.mp4",
   },
 ];
 
@@ -94,10 +148,46 @@ export default function Landing() {
         </div>
       </section>
 
+      <section className="showcase">
+        {SHOWCASES.map((s, i) => (
+          <div className={`showcase-row${i % 2 === 1 ? " reverse" : ""}`} key={s.title}>
+            <div className="showcase-media">
+              <video src={s.video} autoPlay loop muted playsInline preload="metadata" />
+            </div>
+            <div className="showcase-text">
+              <span className="showcase-badge">
+                {s.icon} {s.badge}
+              </span>
+              <h3>{s.title}</h3>
+              <ul className="showcase-points">
+                {s.points.map((p) => (
+                  <li key={p.text}>
+                    <span className="pt-icon">{p.icon}</span> {p.text}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
+      </section>
+
       <section className="section" id="features">
         <h2>Features at a Glance</h2>
+
+        <h3 className="feature-group-title">🧭 Job Search</h3>
         <div className="feature-cards">
-          {FEATURES.map((f) => (
+          {JOB_FEATURES.map((f) => (
+            <div className="feature-card" key={f.title}>
+              <div className="icon">{f.icon}</div>
+              <h3>{f.title}</h3>
+              <p>{f.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="feature-group-title">📚 Study Tools</h3>
+        <div className="feature-cards">
+          {STUDY_FEATURES.map((f) => (
             <div className="feature-card" key={f.title}>
               <div className="icon">{f.icon}</div>
               <h3>{f.title}</h3>

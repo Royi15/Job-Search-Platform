@@ -117,8 +117,42 @@ label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px
   filter: drop-shadow(0 8px 24px rgba(59, 130, 246, 0.25));
 }
 
+/* ============ Feature spotlight rows (video/gif + text, alternating) ============ */
+.showcase { padding: 24px 64px 8px; width: 100%; display: grid; gap: 64px; }
+.showcase-row { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.showcase-row.reverse .showcase-media { order: 2; }
+.showcase-row.reverse .showcase-text { order: 1; }
+.showcase-media {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(245, 197, 24, 0.08));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+.showcase-media video { display: block; width: 100%; height: auto; }
+.showcase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+}
+.showcase-text h3 { font-size: 34px; font-weight: 800; margin: 0 0 20px; line-height: 1.2; letter-spacing: -0.3px; max-width: 480px; }
+.showcase-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 460px; }
+.showcase-points li { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 14.5px; line-height: 1.5; }
+.showcase-points .pt-icon { flex-shrink: 0; font-size: 17px; }
+
 .section { padding: 48px 64px; width: 100%; }
 .section h2 { font-size: 22px; margin-bottom: 24px; }
+.feature-group-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 28px 0 14px; }
+.section h2 + .feature-group-title { margin-top: 0; }
 .feature-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
 .feature-card {
   background: var(--panel);
@@ -511,6 +545,10 @@ a.feature-card:hover { border-color: var(--blue); }
   .app-shell { grid-template-columns: 1fr; }
   .sidebar { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
   .form-row { grid-template-columns: 1fr; }
+  .showcase { padding: 20px 24px 4px; gap: 40px; }
+  .showcase-row { grid-template-columns: 1fr; gap: 18px; }
+  .showcase-row.reverse .showcase-media,
+  .showcase-row.reverse .showcase-text { order: initial; }
 }
 
 /* ============ Print (notebook PDF export) ============ */
