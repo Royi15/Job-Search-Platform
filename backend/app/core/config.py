@@ -43,6 +43,15 @@ class Settings(BaseSettings):
     discord_webhook_url: str = ""
 
     # Bright Data — LinkedIn student-jobs discovery
+    # Defaults to on so the VM needs no .env change to keep working as-is.
+    # Set to false in a LOCAL backend/.env so a developer running the worker
+    # locally for other features (notebooks/quizzes/interview) doesn't also
+    # fire a real hourly scrape against the shared production Bright Data
+    # key — two workers (local + VM) both polling independently is exactly
+    # what caused duplicate job notifications in production. fetch_and_notify
+    # stays manually triggerable via `python -m scripts.trigger_fetch`
+    # regardless of this flag, for testing the job-search path on demand.
+    enable_job_scraping_cron: bool = True
     brightdata_api_key: str = ""
     brightdata_dataset_id: str = "gd_lpfll7v5hcqtkxl6l"
     brightdata_keyword: str = "student"
