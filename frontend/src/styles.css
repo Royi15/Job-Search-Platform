@@ -299,15 +299,65 @@ a.feature-card:hover { border-color: var(--blue); }
   --panel: #ffffff;
   --panel-2: #eef1f6;
   --border: #d7dde6;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* A fixed physical page size — content no longer resizes the card. A page
+     with little content just shows blank space below it (see
+     .notebook-page-body); a page with a lot scrolls internally instead of
+     growing the card, so every page reads as the same sheet of paper. */
+  height: 760px;
   background-color: #fdfdfb;
   background-image:
     linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 26px 26px;
   border-radius: 14px;
-  padding: 32px 36px 40px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  /* Main drop shadow, plus two flat offset layers behind it that read as a
+     small stack of pages underneath the visible one. */
+  box-shadow:
+    0 14px 40px rgba(0, 0, 0, 0.35),
+    7px -7px 0 0 #efece3,
+    14px -14px 0 0 #e6e2d6;
   color: var(--text);
+  margin: 6px 18px 10px 2px; /* room for the stacked-page shadow to show */
+}
+/* Spiral-binding holes down the left edge — a repeating column of small
+   punched-out circles, half overlapping the page's own edge. */
+.notebook-paper::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 28px;
+  bottom: 28px;
+  width: 14px;
+  background-image: radial-gradient(circle, var(--bg-soft) 42%, transparent 44%);
+  background-size: 14px 28px;
+  background-repeat: repeat-y;
+  background-position: center top;
+}
+/* A small tab sticking out past the right edge in the notebook's own
+   subject-derived accent color — like a bookmark/page flag. */
+.notebook-paper::after {
+  content: "";
+  position: absolute;
+  top: 44px;
+  right: -14px;
+  width: 26px;
+  height: 60px;
+  background: var(--nb-accent, var(--blue));
+  border-radius: 0 8px 8px 0;
+  box-shadow: 2px 3px 10px rgba(0, 0, 0, 0.28);
+}
+/* Everything that actually varies in length (cover header + the page's own
+   content) lives in here, not on .notebook-paper itself — so the outer
+   frame and its decorations stay a fixed size, and only this inner area
+   scrolls on pages with more content than the fixed height can show. */
+.notebook-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 32px 36px 40px;
 }
 /* Prose-heavy subjects (languages, history, law, ...) get ruled lines
    instead of a grid — no vertical lines, wider spacing, like real notebook
@@ -549,6 +599,7 @@ a.feature-card:hover { border-color: var(--blue); }
   .showcase-row { grid-template-columns: 1fr; gap: 18px; }
   .showcase-row.reverse .showcase-media,
   .showcase-row.reverse .showcase-text { order: initial; }
+  .notebook-paper { height: 560px; margin: 4px 10px 8px 2px; }
 }
 
 /* ============ Print (notebook PDF export) ============ */
@@ -572,4 +623,13 @@ a.feature-card:hover { border-color: var(--blue); }
   body { background: #fff; }
   .notebook-section, .notebook-table tr, .notebook-glossary > div, .notebook-callout, .notebook-diagram { break-inside: avoid; }
   .notebook-heading { break-after: avoid; }
+  /* The fixed-page-size + internal-scroll treatment is a screen-only
+     convenience — a PDF export must show full, unclipped content for every
+     page, flowing across natural print page breaks instead of being
+     capped at one on-screen page's height. Decorative flourishes (spiral
+     holes, the side tab, the stacked-page shadow) are dropped too, for a
+     cleaner, ink-friendly export. */
+  .notebook-paper { height: auto !important; box-shadow: none !important; margin: 0 !important; }
+  .notebook-paper::before, .notebook-paper::after { display: none !important; }
+  .notebook-page-body { overflow: visible !important; flex: none !important; }
 }

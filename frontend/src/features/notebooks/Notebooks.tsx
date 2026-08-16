@@ -236,7 +236,7 @@ export default function Notebooks() {
     }
 
     return (
-      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <div className="no-print" style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setSelectedId(null)}>
             ← Back to notebooks
@@ -250,48 +250,50 @@ export default function Notebooks() {
           className={`notebook-paper ${c.paper_style === "lined" ? "lined" : ""}`}
           style={{ ["--nb-accent" as string]: `hsl(${hue}, 62%, 42%)` }}
         >
-          {showCover && (
-            <>
-              {c.subject && (
-                <div className="notebook-subject" dir={contentDir} style={{ textAlign }}>
-                  {c.subject}
-                </div>
-              )}
-              <h1 className="notebook-title" dir={contentDir} style={{ textAlign }}>
-                {notebookTitle}
-              </h1>
-              {c.summary && (
-                <p className="notebook-summary" dir={contentDir} style={{ textAlign }}>
-                  <MathText text={c.summary} dir={mathDir} />
-                </p>
-              )}
-            </>
-          )}
+          <div className="notebook-page-body">
+            {showCover && (
+              <>
+                {c.subject && (
+                  <div className="notebook-subject" dir={contentDir} style={{ textAlign }}>
+                    {c.subject}
+                  </div>
+                )}
+                <h1 className="notebook-title" dir={contentDir} style={{ textAlign }}>
+                  {notebookTitle}
+                </h1>
+                {c.summary && (
+                  <p className="notebook-summary" dir={contentDir} style={{ textAlign }}>
+                    <MathText text={c.summary} dir={mathDir} />
+                  </p>
+                )}
+              </>
+            )}
 
-          {printMode ? (
-            <div className="stack">
-              {pages.map((page, i) => (
-                <ErrorBoundary key={i} fallback={<div className="empty">This page couldn't be displayed.</div>}>
-                  <div>{renderPage(page)}</div>
-                </ErrorBoundary>
-              ))}
-            </div>
-          ) : (
-            <ErrorBoundary
-              key={clampedIndex}
-              fallback={
-                <div className="empty">
-                  This page couldn't be displayed — try Prev/Next to move to another page.
-                </div>
-              }
-            >
-              <div
-                className={`notebook-page-anim ${pageDirection === "next" ? "notebook-page-next" : "notebook-page-prev"}`}
-              >
-                {pages[clampedIndex] && renderPage(pages[clampedIndex])}
+            {printMode ? (
+              <div className="stack">
+                {pages.map((page, i) => (
+                  <ErrorBoundary key={i} fallback={<div className="empty">This page couldn't be displayed.</div>}>
+                    <div>{renderPage(page)}</div>
+                  </ErrorBoundary>
+                ))}
               </div>
-            </ErrorBoundary>
-          )}
+            ) : (
+              <ErrorBoundary
+                key={clampedIndex}
+                fallback={
+                  <div className="empty">
+                    This page couldn't be displayed — try Prev/Next to move to another page.
+                  </div>
+                }
+              >
+                <div
+                  className={`notebook-page-anim ${pageDirection === "next" ? "notebook-page-next" : "notebook-page-prev"}`}
+                >
+                  {pages[clampedIndex] && renderPage(pages[clampedIndex])}
+                </div>
+              </ErrorBoundary>
+            )}
+          </div>
         </div>
 
         {!printMode && pages.length > 1 && (
