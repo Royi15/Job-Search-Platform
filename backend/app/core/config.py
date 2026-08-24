@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     brightdata_location: str = "israel"
     brightdata_country: str = "IL"
     brightdata_time_range: str = "Past 24 hours"
+    # Filters at the source (LinkedIn's own seniority field on each posting)
+    # instead of guessing relevance from keywords after the fact — a senior
+    # role that happens to mention "students" in its description would pass
+    # a text filter but not this. Matches this platform's actual audience
+    # (README: "students and junior engineers"); Associate-and-above are
+    # deliberately excluded as not "junior" enough.
+    brightdata_experience_level: list[str] = ["Internship", "Entry level"]
 
     # Files / CORS
     upload_dir: str = "./uploads"
