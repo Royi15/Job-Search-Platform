@@ -54,6 +54,11 @@ class BrightDataLinkedInSource:
             "type": "discover_new",
             "discover_by": "keyword",
         }
+        # Bright Data's own dashboard only lets you pick one experience_level
+        # per query — it's a single string field, not a multi-select. To get
+        # both "Internship" and "Entry level" in one API call, send one input
+        # item per level (same keyword/location/etc. otherwise) — "input" is
+        # a list of independent queries, not one query with a list field.
         payload = {
             "input": [
                 {
@@ -62,11 +67,12 @@ class BrightDataLinkedInSource:
                     "country": settings.brightdata_country,
                     "time_range": settings.brightdata_time_range,
                     "job_type": "",
-                    "experience_level": "",
+                    "experience_level": level,
                     "remote": "",
                     "company": "",
                     "location_radius": "",
                 }
+                for level in settings.brightdata_experience_level
             ]
         }
 
@@ -74,6 +80,10 @@ class BrightDataLinkedInSource:
             response = await client.post(
                 SCRAPE_URL, params=params, headers=headers, json=payload
             )
+            if response.status_code >= 400:
+                logger.error(
+                    "Bright Data HTTP %s: %s", response.status_code, response.text[:1000]
+                )
             response.raise_for_status()
             data = _parse_json_or_ndjson(response.text)
 
